@@ -1,23 +1,18 @@
-import logging
-import os
-import pathlib
 import pickle
 from typing import Dict
 
 import numpy as np
-import h5py
-from pytorch_lightning.utilities import rank_zero_only
 import torch.distributed as dist
 
 
 class SegmentSampler:
     def __init__(
-        self, 
-        indexes_path: str, 
+        self,
+        indexes_path: str,
         max_random_shift,
-        mixaudio_dict: Dict, 
-        batch_size: int, 
-        steps_per_epoch: int, 
+        mixaudio_dict: Dict,
+        batch_size: int,
+        steps_per_epoch: int,
         random_seed=1234,
     ):
         r"""Sample training indexes of sources.
@@ -41,7 +36,7 @@ class SegmentSampler:
         #     'vocals': [['song_A.h5', 0, 132300,], [4410, 136710], ...]
         #     'accompaniment': [[sonsg_A.h5, 0, 132300,], [4410, 136710], ...]
         # }
-        
+
         if self.max_random_shift:
             self.tmp_dict = pickle.load(open('tmp.pkl', 'rb'))
 
@@ -52,11 +47,10 @@ class SegmentSampler:
         # E.g., {'vocals': 0, 'accompaniment': 0}
 
         self.indexes_dict = {
-            source_type: np.arange(len(self.meta_dict[source_type]))
-            for source_type in self.source_types
+            source_type: np.arange(len(self.meta_dict[source_type])) for source_type in self.source_types
         }
         # E.g. {
-        #     'vocals': [0, 1, ..., 225751], 
+        #     'vocals': [0, 1, ..., 225751],
         #     'accompaniment': [0, 1, ..., 225751]
         # }
 
@@ -90,7 +84,7 @@ class SegmentSampler:
 
                 # Loop until get a mini-batch.
                 while len(batch_meta_dict[source_type]) != batch_size:
-                    
+
                     largest_index = len(self.indexes_dict[source_type]) - self.mixaudio_dict[source_type]
                     # E.g., 225750 = 225752 - 2
 
@@ -146,12 +140,9 @@ class SegmentSampler:
             #                       [['song_G.h5', 2795940, 2928240], ['song_H.h5', 10923570, 11055870]],
             #                       ...]
             # }
-            
+
             batch_meta_list = [
-                {
-                    source_type: batch_meta_dict[source_type][i]
-                    for source_type in self.source_types
-                }
+                {source_type: batch_meta_dict[source_type][i] for source_type in self.source_types}
                 for i in range(batch_size)
             ]
             # E.g., [
@@ -163,7 +154,7 @@ class SegmentSampler:
             #     }
             #     ...
             # ]
-            
+
             yield batch_meta_list
 
     def __len__(self):
@@ -180,8 +171,7 @@ class SegmentSampler:
 
 class DistributedSamplerWrapper:
     def __init__(self, sampler):
-        r"""Distributed wrapper of sampler.
-        """
+        r"""Distributed wrapper of sampler."""
         self.sampler = sampler
 
     def __iter__(self):
@@ -189,7 +179,7 @@ class DistributedSamplerWrapper:
         rank = dist.get_rank()
 
         for indices in self.sampler:
-            yield indices[rank :: num_replicas]
+            yield indices[rank::num_replicas]
 
     def __len__(self):
         return len(self.sampler)

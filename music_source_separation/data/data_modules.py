@@ -1,14 +1,13 @@
-import os
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 import numpy as np
 import h5py
 import torch
 from pytorch_lightning.core.datamodule import LightningDataModule
 
-from music_source_separation.data.samplers import SegmentSampler, DistributedSamplerWrapper
+from music_source_separation.data.samplers import DistributedSamplerWrapper
 from music_source_separation.data.augmentors import Augmentor
-from music_source_separation.utils import int16_to_float32, magnitude_to_db, db_to_magnitude
+from music_source_separation.utils import int16_to_float32
 
 
 class DataModule(LightningDataModule):
@@ -51,8 +50,7 @@ class DataModule(LightningDataModule):
         self.train_dataset = Dataset(augmentor)
 
     def setup(self, stage: Optional[str] = None):
-        r"""called on every device.
-        """
+        r"""called on every device."""
 
         # SegmentSampler is used for selecting segments for training.
         # On multipythole devices, each SegmentSampler samples a part of mini-batch
@@ -83,16 +81,15 @@ class DataModule(LightningDataModule):
 
 class Dataset:
     def __init__(self, augmentor):
-        r"""Used for returning data according to a meta.
-        """
+        r"""Used for returning data according to a meta."""
         self.augmentor = augmentor
-        
+
     def __getitem__(self, meta):
         r"""Return data according to a meta. E.g., a meta looks like:
 
             {'vocals': [['song_A.h5', 6332760, 6465060], ['song_B.h5', 198450, 330750]],
              'accompaniment': [['song_C.h5', 24232920, 24365250], ['song_D.h5', 1569960, 1702260]]}.
-        
+
         Then, vocals segments of song_A and song_B will be mixed (mix-audio augmentation),
         and accompaniment segments of song_C and song_B will be mixed (mix-audio augmentation).
         Finally, mixture is created by summing vocals and accompaniment.
@@ -117,13 +114,11 @@ class Dataset:
                 [hdf5_path, start_sample, end_sample] = m
 
                 with h5py.File(hdf5_path, 'r') as hf:
-                    
-                    waveform = int16_to_float32(
-                        hf[source_type][:, start_sample : end_sample]
-                    )
+
+                    waveform = int16_to_float32(hf[source_type][:, start_sample:end_sample])
 
                     waveform = self.augmentor(waveform)
-                    
+
                 waveforms.append(waveform)
             # E.g., waveforms: [(channels_num, audio_samples), (channels_num, audio_samples)]
 
@@ -135,11 +130,9 @@ class Dataset:
         #     'voclas': (channels_num, audio_samples),
         #     'accompaniment': (channels_num, audio_samples)
         # }
-        
+
         # Mix segments from different sources.
-        mixture = np.sum(
-            [data_dict[source_type] for source_type in source_types], axis=0
-        )
+        mixture = np.sum([data_dict[source_type] for source_type in source_types], axis=0)
         data_dict['mixture'] = mixture
         # shape: (channels_num, audio_samples)
 
@@ -151,7 +144,7 @@ def collate_fn(list_data_dict):
 
     Args:
         list_data_dict: e.g., [
-            {'vocals': (channels_num, segment_samples), 
+            {'vocals': (channels_num, segment_samples),
              'accompaniment': (channels_num, segment_samples),
              'mixture': (channels_num, segment_samples)
             },
@@ -168,11 +161,9 @@ def collate_fn(list_data_dict):
             'mixture': (batch_size, channels_num, segment_samples)
             }
     """
-    
+
     data_dict = {}
     for key in list_data_dict[0].keys():
-        data_dict[key] = torch.Tensor(
-            np.array([data_dict[key] for data_dict in list_data_dict])
-        )
+        data_dict[key] = torch.Tensor(np.array([data_dict[key] for data_dict in list_data_dict]))
 
     return data_dict

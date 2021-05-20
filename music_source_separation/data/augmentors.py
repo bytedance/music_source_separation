@@ -16,7 +16,7 @@ class Augmentor:
         if self.random_scale_dict:
             random_scale = self.get_random_scale(waveform)
         else:
-            random_scale = 1.
+            random_scale = 1.0
 
         waveform *= random_scale
 

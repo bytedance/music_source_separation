@@ -51,9 +51,7 @@ def mix_audio_from_same_source(data_dict, input_sources, mixaudio):
     for source in input_sources:
         (N, segment_samples, channels_num) = data_dict[source].shape
         data_dict[source] = np.sum(
-            data_dict[source].reshape(
-                mixaudio, N // mixaudio, segment_samples, channels_num
-            ),
+            data_dict[source].reshape(mixaudio, N // mixaudio, segment_samples, channels_num),
             axis=0,
         )
 
@@ -62,11 +60,11 @@ def mix_audio_from_same_source(data_dict, input_sources, mixaudio):
 
 def magnitude_to_db(x):
     eps = 1e-10
-    return 20. * np.log10(max(x, eps))
+    return 20.0 * np.log10(max(x, eps))
 
 
 def db_to_magnitude(x):
-    return 10. ** (x / 20)
+    return 10.0 ** (x / 20)
 
 
 class StatisticsContainer(object):

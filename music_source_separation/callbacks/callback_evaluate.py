@@ -7,7 +7,6 @@ import time
 import museval
 import numpy as np
 import pytorch_lightning as pl
-import torch
 import torch.nn as nn
 from pytorch_lightning.utilities import rank_zero_only
 
@@ -59,8 +58,7 @@ class CallbackEvaluation(pl.Callback):
 
     @rank_zero_only
     def on_batch_end(self, trainer: pl.Trainer, _):
-        r"""Evaluate separation SDRs of audio recordings.
-        """
+        r"""Evaluate separation SDRs of audio recordings."""
 
         global_step = trainer.global_step
 
@@ -69,9 +67,7 @@ class CallbackEvaluation(pl.Callback):
             sdr_dict = {}
 
             logging.info("--- Step {} ---".format(global_step))
-            logging.info(
-                "Total {} pieces for evaluation:".format(len(self.hdf5_names))
-            )
+            logging.info("Total {} pieces for evaluation:".format(len(self.hdf5_names)))
 
             eval_time = time.time()
 
@@ -83,7 +79,7 @@ class CallbackEvaluation(pl.Callback):
                     target = int16_to_float32(hf[self.target_source_type][:])
 
                 sep_wav = self.separator.separate(mixture)
-                
+
                 # Calculate SDR using museval, input shape should be: (nsrc, nsampl, nchan)
                 (sdrs, _, _, _) = museval.evaluate([target.T], [sep_wav.T])
 
@@ -93,17 +89,13 @@ class CallbackEvaluation(pl.Callback):
                 sdr_dict[audio_name] = sdr
                 logging.info("{}, sdr: {:.3f}".format(audio_name, sdr))
 
-            median_sdr = np.median(
-                [sdr_dict[audio_name] for audio_name in sdr_dict.keys()]
-            )
+            median_sdr = np.median([sdr_dict[audio_name] for audio_name in sdr_dict.keys()])
 
             print()
             logging.info("Step: {}, Median SDR: {:.3f}".format(global_step, median_sdr))
             logging.info("Evlauation time: {:.3f}".format(time.time() - eval_time))
 
-            self.logger.experiment.add_scalar(
-                "SDR/{}".format(self.split), median_sdr, global_step
-            )
+            self.logger.experiment.add_scalar("SDR/{}".format(self.split), median_sdr, global_step)
 
             statistics = {"sdr_dict": sdr_dict, "median_sdr": median_sdr}
             self.statistics_container.append(global_step, statistics, self.split)

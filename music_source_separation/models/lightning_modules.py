@@ -1,10 +1,5 @@
-import math
-from typing import List
-
 import pytorch_lightning as pl
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -64,17 +59,12 @@ class LitSourceSeparation(pl.LightningModule):
         # (batch_size, channels_num, segment_samples)
 
         # Calculate loss.
-        loss = self.loss_function(
-            output=output, 
-            target=target, 
-            mixture=mixture
-        )
+        loss = self.loss_function(output=output, target=target, mixture=mixture)
 
         return loss
 
     def configure_optimizers(self):
-        r"""Configure optimizer.
-        """
+        r"""Configure optimizer."""
 
         optimizer = optim.Adam(
             self.model.parameters(),
@@ -105,7 +95,8 @@ def get_model_class(model_type):
     """
     if model_type == 'ResUNet143_DecouplePlusInplaceABN':
         from music_source_separation.models.resunet import ResUNet143_DecouplePlusInplaceABN
+
         return ResUNet143_DecouplePlusInplaceABN
-    
+
     else:
         raise NotImplementedError

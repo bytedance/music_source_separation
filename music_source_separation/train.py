@@ -80,7 +80,6 @@ def train(args):
     indexes_path = os.path.join(workspace, configs['train']['indexes_dict'])
     sample_rate = configs['train']['sample_rate']
     channels = configs['train']['channels']
-    segment_seconds = configs['train']['segment_seconds']
     model_type = configs['train']['model_type']
     loss_type = configs['train']['loss_type']
 
@@ -126,7 +125,6 @@ def train(args):
     test_segment_seconds = configs['evaluate']['segment_seconds']
     test_batch_size = configs['evaluate']['batch_size']
 
-    segment_samples = int(segment_seconds * sample_rate)
     test_segment_samples = int(test_segment_seconds * sample_rate)
     
     # paths

@@ -28,14 +28,11 @@ class CallbackCheckpoint(pl.Callback):
 
     @rank_zero_only
     def on_batch_end(self, trainer: pl.Trainer, _):
-        r"""Save checkpoint.
-        """
+        r"""Save checkpoint."""
         global_step = trainer.global_step
 
         if global_step % self.save_step_frequency == 0:
-            checkpoint_path = os.path.join(
-                self.checkpoints_dir, "step={}.pth".format(global_step)
-            )
+            checkpoint_path = os.path.join(self.checkpoints_dir, "step={}.pth".format(global_step))
 
             checkpoint = {'step': global_step, 'model': self.model.state_dict()}
 

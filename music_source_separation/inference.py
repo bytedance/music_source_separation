@@ -208,91 +208,26 @@ def inference(args):
     batch_size = 1 
     device = "cuda" 
 
-    # select = '4'
-    # UNetRes137_Complex = UNetRes143_Complex
+    # Todo
 
-    if select == '1':
-        model = UNet(channels=2)
-        checkpoint_path = "/home/tiger/my_code_2019.12-/python/byte_separation/workspaces/byte_separation/checkpoints/train/config=unet_vocals/step=100000.pth"
+    # checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    # model.load_state_dict(checkpoint["model"])
 
-    elif select == '2':
-        model = UNetRes137_Complex(channels=2)
-        # checkpoint_path = "/home/tiger/my_code_2019.12-/python/byte_separation/workspaces/byte_separation/checkpoints/train/config=02/step=300000.pth"
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=02/step=300000.pth"
+    # model.to(device)
 
-    elif select == '3':
-        model = UNetRes143_Complex(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=10,gpus=2/step=200000.pth"
+    # separator = Separator(model, segment_samples, batch_size, device)
 
-    elif select == '4':
-        model = UNetRes143_Complex(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=16b,gpus=2/step=300000.pth"
+    # audio, _ = librosa.load(audio_path, sr=sample_rate, mono=False)
 
-    elif select == '5':
-        model = UNetRes143_Complex6_weightlinear(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=52c,gpus=2/step=300000.pth"
+    # separate_time = time.time()
+    # sep_wav = separator.separate(audio)
+    # res_wav = audio - sep_wav
+    # print('Separate time: {:.3f} s'.format(time.time() - separate_time))
 
-    elif select == '5b':
-        model = UNet2Complex4(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=42,gpus=2/step=200000.pth"
-
-    elif select == '5c':
-        model = UNet2Complex4(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=42b,gpus=2/step=200000.pth"
-
-    elif select == '5d':
-        model = UNet2Complex4(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=42c,gpus=2/step=200000.pth"
-
-    elif select == '6':
-        # voc
-        model = UNetRes143_Complex6_weightlinear(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=52c,gpus=2/step=300000.pth"
-
-    elif select == '6b':
-        # acc
-        model = UNetRes143_Complex6_weightlinear(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=54c,gpus=2/step=200000.pth"
-
-    elif select == '6c':
-        # bass
-        model = UNetRes143_Complex7_weightlinear(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=55c,gpus=2/step=100000.pth"
-
-    elif select == '6d':
-        # drums
-        model = UNetRes143_Complex7_weightlinear(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=56c,gpus=2/step=100000.pth"
-
-    elif select == '6e':
-        # other
-        model = UNetRes143_Complex7_weightlinear(channels=2)
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train/config=57c,gpus=2/step=100000.pth"
-
-    elif select == '4_violin':
-        model = UNetRes143_Complex(channels=2) 
-        checkpoint_path = "/home/tiger/workspaces/byte_separation/checkpoints/train_violin_piano/config=02,gpus=2/step=100000.pth"
-
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
-    model.load_state_dict(checkpoint["model"])
-
-    model.to(device)
-
-    separator = Separator(model, segment_samples, batch_size, device)
-
-    audio, _ = librosa.load(audio_path, sr=sample_rate, mono=False)
-
-    separate_time = time.time()
-    sep_wav = separator.separate(audio)
-    res_wav = audio - sep_wav
-    print('Separate time: {:.3f} s'.format(time.time() - separate_time))
-
-    # # Write out separated audio
-    soundfile.write(file=output_path, data=sep_wav.T, samplerate=sample_rate)
-    soundfile.write(file='_zz2.wav', data=res_wav.T, samplerate=sample_rate)
-    # os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    # librosa.output.write_wav(output_path, sep_audio, sr=sample_rate)
-    # print('Write out to {}'.format(output_path))
+    # # # Write out separated audio
+    # soundfile.write(file=output_path, data=sep_wav.T, samplerate=sample_rate)
+    # soundfile.write(file='_zz2.wav', data=res_wav.T, samplerate=sample_rate)
+    
 
 
 if __name__ == "__main__":
