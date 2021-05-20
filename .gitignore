@@ -1,0 +1,8 @@
+__pycache__
+./datasets
+./workspaces
+./lightning_logs
+.DS_Store
+.egg-info/
+.tox
+.pytest_cache
