@@ -1,0 +1,5 @@
+__pycache__
+.DS_Store
+.egg-info/
+.tox
+.pytest_cache

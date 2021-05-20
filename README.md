@@ -6,9 +6,11 @@ This repository can be also used for general separation tasks including 1) Speec
 
 ## Demos
 
+TODO
 
 ## Installation
 
+TODO
 
 ## Train a music source separation system from scratch
 
@@ -40,14 +42,17 @@ We pack audio waveforms into hdf5 files to speed up training.
 ./scripts/pack_musdb18_audios_to_hdf5s.sh
 ```
 
-## Create indexes for training
+## 3. Create indexes for training
 
 ```bash
 ./scripts/create_indexes_musdb18.sh
 ```
 
-## Train & evaluate & save checkpoints
+## 4. Train & evaluate & save checkpoints
 ```bash
 ./scripts/train_musdb18.sh
 ```
 
+## Reference
+
+To appear.
