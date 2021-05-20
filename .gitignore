@@ -1,4 +1,6 @@
 __pycache__
+./datasets
+./workspaces
 .DS_Store
 .egg-info/
 .tox
