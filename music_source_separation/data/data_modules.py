@@ -1,53 +1,36 @@
-from typing import Dict, Optional
+from typing import Optional, Dict, List
 
-import numpy as np
 import h5py
+import librosa
+import numpy as np
 import torch
 from pytorch_lightning.core.datamodule import LightningDataModule
 
 from music_source_separation.data.samplers import DistributedSamplerWrapper
-from music_source_separation.data.augmentors import Augmentor
 from music_source_separation.utils import int16_to_float32
 
 
 class DataModule(LightningDataModule):
     def __init__(
         self,
-        indexes_path: str,
-        max_random_shift: int,
-        mixaudio_dict: Dict,
-        augmentor: Augmentor,
-        Sampler,
-        batch_size: int,
-        steps_per_epoch: int,
+        train_sampler,
+        train_dataset,
         num_workers: int,
         distributed: bool,
     ):
         r"""Data module.
 
         Args:
-            indexes_path: str, path of indexes dict
-            mixaudio_dict, dict, including hyper-parameters for mix-audio data
-                augmentation, e.g., {'voclas': 2, 'accompaniment': 2}
-            augmentor: Augmentor
-            Sampler: Sampler class
-            batch_size, int, e.g., 12
-            steps_per_epoch: int, #steps_per_epoch is called an `epoch`
-                e.g., 10000
+            train_sampler: Sampler object
+            train_dataset: Dataset object
             num_workers: int
             distributed: bool
         """
         super().__init__()
-        self.indexes_path = indexes_path
-        self.max_random_shift = max_random_shift
-        self.mixaudio_dict = mixaudio_dict
-        self.Sampler = Sampler
-        self.batch_size = batch_size
-        self.steps_per_epoch = steps_per_epoch
+        self._train_sampler = train_sampler
+        self.train_dataset = train_dataset
         self.num_workers = num_workers
         self.distributed = distributed
-
-        self.train_dataset = Dataset(augmentor)
 
     def setup(self, stage: Optional[str] = None):
         r"""called on every device."""
@@ -55,20 +38,13 @@ class DataModule(LightningDataModule):
         # SegmentSampler is used for selecting segments for training.
         # On multipythole devices, each SegmentSampler samples a part of mini-batch
         # data.
-        _train_sampler = self.Sampler(
-            indexes_path=self.indexes_path,
-            max_random_shift=self.max_random_shift,
-            mixaudio_dict=self.mixaudio_dict,
-            batch_size=self.batch_size,
-            steps_per_epoch=self.steps_per_epoch,
-        )
-
         if self.distributed:
-            self.train_sampler = DistributedSamplerWrapper(_train_sampler)
+            self.train_sampler = DistributedSamplerWrapper(self._train_sampler)
         else:
-            self.train_sampler = _train_sampler
+            self.train_sampler = self._train_sampler
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> torch.utils.data.DataLoader:
+        r"""Get train loader."""
         train_loader = torch.utils.data.DataLoader(
             dataset=self.train_dataset,
             batch_sampler=self.train_sampler,
@@ -80,29 +56,39 @@ class DataModule(LightningDataModule):
 
 
 class Dataset:
-    def __init__(self, augmentor):
-        r"""Used for returning data according to a meta."""
+    def __init__(self, augmentor, segment_samples: int):
+        r"""Used for returning data according to a meta.
+
+        Args:
+            augmentor: Augmentor class
+            segment_samples: int
+        """
         self.augmentor = augmentor
+        self.segment_samples = segment_samples
 
-    def __getitem__(self, meta):
-        r"""Return data according to a meta. E.g., a meta looks like:
+    def __getitem__(self, meta: Dict) -> Dict:
+        r"""Return data according to a meta. E.g., a meta looks like: {
+            'vocals': [['song_A.h5', 6332760, 6465060], ['song_B.h5', 198450, 330750]],
+            'accompaniment': [['song_C.h5', 24232920, 24365250], ['song_D.h5', 1569960, 1702260]]}.
+        }
 
-            {'vocals': [['song_A.h5', 6332760, 6465060], ['song_B.h5', 198450, 330750]],
-             'accompaniment': [['song_C.h5', 24232920, 24365250], ['song_D.h5', 1569960, 1702260]]}.
-
-        Then, vocals segments of song_A and song_B will be mixed (mix-audio augmentation),
-        and accompaniment segments of song_C and song_B will be mixed (mix-audio augmentation).
+        Then, vocals segments of song_A and song_B will be mixed (mix-audio augmentation).
+        Accompaniment segments of song_C and song_B will be mixed (mix-audio augmentation).
         Finally, mixture is created by summing vocals and accompaniment.
 
         Args:
-            meta: dict, e.g.,
-                {'vocals': [['song_A.h5', 6332760, 6465060], ['song_B.h5', 198450, 330750]],
-                 'accompaniment': [['song_C.h5', 24232920, 24365250], ['song_D.h5', 1569960, 1702260]]}
+            meta: dict, e.g., {
+                'vocals': [['song_A.h5', 6332760, 6465060], ['song_B.h5', 198450, 330750]],
+                'accompaniment': [['song_C.h5', 24232920, 24365250], ['song_D.h5', 1569960, 1702260]]}
+            }
 
         Returns:
-            data_dict: dict, e.g.,
+            data_dict: dict, e.g., {
+                'vocals': (channels, segments_num),
+                'accompaniment': (channels, segments_num),
+                'mixture': (channels, segments_num),
+            }
         """
-
         source_types = meta.keys()
         data_dict = {}
 
@@ -115,9 +101,16 @@ class Dataset:
 
                 with h5py.File(hdf5_path, 'r') as hf:
 
-                    waveform = int16_to_float32(hf[source_type][:, start_sample:end_sample])
+                    waveform = int16_to_float32(
+                        hf[source_type][:, start_sample : end_sample]
+                    )
 
-                    waveform = self.augmentor(waveform)
+                    if self.augmentor:
+                        waveform = self.augmentor(waveform)
+
+                    waveform = librosa.util.fix_length(
+                        waveform, size=self.segment_samples, axis=1
+                    )
 
                 waveforms.append(waveform)
             # E.g., waveforms: [(channels_num, audio_samples), (channels_num, audio_samples)]
@@ -132,14 +125,16 @@ class Dataset:
         # }
 
         # Mix segments from different sources.
-        mixture = np.sum([data_dict[source_type] for source_type in source_types], axis=0)
+        mixture = np.sum(
+            [data_dict[source_type] for source_type in source_types], axis=0
+        )
         data_dict['mixture'] = mixture
         # shape: (channels_num, audio_samples)
 
         return data_dict
 
 
-def collate_fn(list_data_dict):
+def collate_fn(list_data_dict: List[Dict]) -> Dict:
     r"""Collate mini-batch data to inputs and targets for training.
 
     Args:
@@ -161,9 +156,10 @@ def collate_fn(list_data_dict):
             'mixture': (batch_size, channels_num, segment_samples)
             }
     """
-
     data_dict = {}
     for key in list_data_dict[0].keys():
-        data_dict[key] = torch.Tensor(np.array([data_dict[key] for data_dict in list_data_dict]))
+        data_dict[key] = torch.Tensor(
+            np.array([data_dict[key] for data_dict in list_data_dict])
+        )
 
     return data_dict

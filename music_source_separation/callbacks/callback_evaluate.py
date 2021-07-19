@@ -89,13 +89,17 @@ class CallbackEvaluation(pl.Callback):
                 sdr_dict[audio_name] = sdr
                 logging.info("{}, sdr: {:.3f}".format(audio_name, sdr))
 
-            median_sdr = np.median([sdr_dict[audio_name] for audio_name in sdr_dict.keys()])
+            median_sdr = np.median(
+                [sdr_dict[audio_name] for audio_name in sdr_dict.keys()]
+            )
 
             print()
             logging.info("Step: {}, Median SDR: {:.3f}".format(global_step, median_sdr))
             logging.info("Evlauation time: {:.3f}".format(time.time() - eval_time))
 
-            self.logger.experiment.add_scalar("SDR/{}".format(self.split), median_sdr, global_step)
+            self.logger.experiment.add_scalar(
+                "SDR/{}".format(self.split), median_sdr, global_step
+            )
 
             statistics = {"sdr_dict": sdr_dict, "median_sdr": median_sdr}
             self.statistics_container.append(global_step, statistics, self.split)

@@ -1,5 +1,5 @@
 import pickle
-from typing import Dict
+from typing import List, Dict
 
 import numpy as np
 import torch.distributed as dist
@@ -9,7 +9,7 @@ class SegmentSampler:
     def __init__(
         self,
         indexes_path: str,
-        max_random_shift,
+        segment_samples,
         mixaudio_dict: Dict,
         batch_size: int,
         steps_per_epoch: int,
@@ -19,26 +19,23 @@ class SegmentSampler:
 
         Args:
             indexes_path: str, path of indexes dict
+            segment_samplers: int
             mixaudio_dict, dict, including hyper-parameters for mix-audio data
                 augmentation, e.g., {'voclas': 2, 'accompaniment': 2}
             batch_size: int
             steps_per_epoch: int, #steps_per_epoch is called an `epoch`
             random_seed: int
         """
-
+        self.segment_samples = segment_samples
         self.mixaudio_dict = mixaudio_dict
         self.batch_size = batch_size
         self.steps_per_epoch = steps_per_epoch
-        self.max_random_shift = max_random_shift
 
         self.meta_dict = pickle.load(open(indexes_path, "rb"))
         # E.g., {
         #     'vocals': [['song_A.h5', 0, 132300,], [4410, 136710], ...]
         #     'accompaniment': [[sonsg_A.h5, 0, 132300,], [4410, 136710], ...]
         # }
-
-        if self.max_random_shift:
-            self.tmp_dict = pickle.load(open('tmp.pkl', 'rb'))
 
         self.source_types = self.meta_dict.keys()
         # E.g., ['vocals', 'accompaniment']
@@ -47,7 +44,8 @@ class SegmentSampler:
         # E.g., {'vocals': 0, 'accompaniment': 0}
 
         self.indexes_dict = {
-            source_type: np.arange(len(self.meta_dict[source_type])) for source_type in self.source_types
+            source_type: np.arange(len(self.meta_dict[source_type]))
+            for source_type in self.source_types
         }
         # E.g. {
         #     'vocals': [0, 1, ..., 225751],
@@ -61,7 +59,7 @@ class SegmentSampler:
             self.random_state.shuffle(self.indexes_dict[source_type])
             print("{}: {}".format(source_type, len(self.indexes_dict[source_type])))
 
-    def __iter__(self):
+    def __iter__(self) -> List[Dict]:
         r"""Yield a batch of meta info.
 
         Returns:
@@ -85,7 +83,10 @@ class SegmentSampler:
                 # Loop until get a mini-batch.
                 while len(batch_meta_dict[source_type]) != batch_size:
 
-                    largest_index = len(self.indexes_dict[source_type]) - self.mixaudio_dict[source_type]
+                    largest_index = (
+                        len(self.indexes_dict[source_type])
+                        - self.mixaudio_dict[source_type]
+                    )
                     # E.g., 225750 = 225752 - 2
 
                     if self.pointers_dict[source_type] > largest_index:
@@ -110,28 +111,13 @@ class SegmentSampler:
                         source_meta = self.meta_dict[source_type][index]
                         # E.g., ['song_A.h5', 198450, 330750]
 
-                        '''
-                        if self.max_random_shift:
-                            random_shift = self.random_state.randint(
-                                low=-self.max_random_shift, 
-                                high=self.max_random_shift
-                            )
+                        hdf5_name, bgn_sample, _ = source_meta
+                        end_sample = bgn_sample + self.segment_samples
+                        new_source_meta = [hdf5_name, bgn_sample, end_sample]
 
-                            hdf5_path, bgn_sample, end_sample = source_meta
-                            segment_samples = end_sample - bgn_sample
-
-                            new_bgn_sample = np.clip(
-                                bgn_sample + random_shift, 
-                                0, 
-                                self.tmp_dict[source_type][hdf5_path][-1] - segment_samples)
-
-                            new_end_sample = new_bgn_sample + segment_samples
-                            source_meta = [hdf5_path, new_bgn_sample, new_end_sample]
-                        '''
-                        source_metas.append(source_meta)
+                        source_metas.append(new_source_meta)
 
                     batch_meta_dict[source_type].append(source_metas)
-
             # batch_meta_dict looks like: {
             #     'vocals': [[['song_A.h5', 6332760, 6465060], ['song_B.h5', 198450, 330750]],
             #                [['song_C.h5', 1173060, 1305360], ['song_D.h5', 4471740, 4604040]],
@@ -142,10 +128,13 @@ class SegmentSampler:
             # }
 
             batch_meta_list = [
-                {source_type: batch_meta_dict[source_type][i] for source_type in self.source_types}
+                {
+                    source_type: batch_meta_dict[source_type][i]
+                    for source_type in self.source_types
+                }
                 for i in range(batch_size)
             ]
-            # E.g., [
+            # batch_meta_list looks like: [
             #     {'vocals': [['song_A.h5', 6332760, 6465060], ['song_B.h5', 198450, 330750]],
             #      'accompaniment': [['song_E.h5', 24232950, 24365250], ['song_F.h5', 1569960, 1702260]]
             #     }
