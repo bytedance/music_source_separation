@@ -1,14 +1,14 @@
 import argparse
 import os
 import time
-import pickle
+from concurrent.futures import ProcessPoolExecutor
 
 import h5py
 import librosa
 import musdb
 import numpy as np
 
-from music_source_separation.utils import float32_to_int16, read_yaml
+from music_source_separation.utils import float32_to_int16
 
 
 # Source types of the MUSDB18 dataset.
@@ -17,7 +17,6 @@ SOURCE_TYPES = ["vocals", "drums", "bass", "other", "accompaniment"]
 
 def pack_audios_to_hdf5s(args):
     r"""Pack (resampled) audio files into hdf5 files to speed up loading."""
-
     # arguments & parameters
     dataset_dir = args.dataset_dir
     subset = args.subset
@@ -30,49 +29,95 @@ def pack_audios_to_hdf5s(args):
     source_types = SOURCE_TYPES
     resample_type = "kaiser_fast"
 
-    # Load dataset according to subset and split.
-    mus = musdb.DB(root=dataset_dir, subsets=[subset], split=split)
-
-    print("Subset: {}, Split: {}, Total pieces: {}".format(subset, split, len(mus)))
-
     # Paths
     os.makedirs(hdf5s_dir, exist_ok=True)
 
+    # Dataset of corresponding subset and split.
+    mus = musdb.DB(root=dataset_dir, subsets=[subset], split=split)
+    print("Subset: {}, Split: {}, Total pieces: {}".format(subset, split, len(mus)))
+
+    params = []  # A list of params for multiple processing.
+
+    for track_index in range(len(mus.tracks)):
+
+        param = (
+            dataset_dir,
+            subset,
+            split,
+            track_index,
+            source_types,
+            mono,
+            sample_rate,
+            resample_type,
+            hdf5s_dir,
+        )
+
+        params.append(param)
+
+    # Uncomment for debug.
+    # write_single_audio_to_hdf5(params[0])
+
     pack_hdf5s_time = time.time()
 
-    # Traverse all tracks.
-    for track_index, track in enumerate(mus.tracks):
-        hdf5_path = os.path.join(hdf5s_dir, "{}.h5".format(track.name))
+    with ProcessPoolExecutor(max_workers=None) as pool:
+        # Maximum works on the machine
+        pool.map(write_single_audio_to_hdf5, params)
 
-        with h5py.File(hdf5_path, "w") as hf:
+    print("Pack hdf5 time: {:.3f} s".format(time.time() - pack_hdf5s_time))
 
-            hf.attrs.create("audio_name", data=track.name.encode(), dtype="S100")
-            hf.attrs.create("sample_rate", data=sample_rate, dtype=np.int32)
 
-            for source_type in source_types:
+def write_single_audio_to_hdf5(param):
+    r"""Write single audio into hdf5 file."""
+    (
+        dataset_dir,
+        subset,
+        split,
+        track_index,
+        source_types,
+        mono,
+        sample_rate,
+        resample_type,
+        hdf5s_dir,
+    ) = param
 
-                audio = track.targets[source_type].audio.T
-                # (channels_num, audio_samples)
+    # Dataset of corresponding subset and split.
+    mus = musdb.DB(root=dataset_dir, subsets=[subset], split=split)
+    track = mus.tracks[track_index]
 
-                # Preprocess audio to mono / stereo, and resample.
-                audio = preprocess_audio(audio, mono, track.rate, sample_rate, resample_type)
-                # (channels_num, audio_samples) | (audio_samples,)
+    # Path to write out hdf5 file.
+    hdf5_path = os.path.join(hdf5s_dir, "{}.h5".format(track.name))
 
-                hf.create_dataset(name=source_type, data=float32_to_int16(audio), dtype=np.int16)
+    with h5py.File(hdf5_path, "w") as hf:
 
-            # Mixture
-            audio = track.audio.T
+        hf.attrs.create("audio_name", data=track.name.encode(), dtype="S100")
+        hf.attrs.create("sample_rate", data=sample_rate, dtype=np.int32)
+
+        for source_type in source_types:
+
+            audio = track.targets[source_type].audio.T
             # (channels_num, audio_samples)
 
             # Preprocess audio to mono / stereo, and resample.
-            audio = preprocess_audio(audio, mono, track.rate, sample_rate, resample_type)
+            audio = preprocess_audio(
+                audio, mono, track.rate, sample_rate, resample_type
+            )
             # (channels_num, audio_samples) | (audio_samples,)
 
-            hf.create_dataset(name="mixture", data=float32_to_int16(audio), dtype=np.int16)
+            hf.create_dataset(
+                name=source_type, data=float32_to_int16(audio), dtype=np.int16
+            )
 
-        print("{} Write to {}, {}".format(track_index, hdf5_path, audio.shape))
+        # Mixture
+        audio = track.audio.T
+        # (channels_num, audio_samples)
 
-    print("Pack hdf5 time: {:.3f} s".format(time.time() - pack_hdf5s_time))
+        # Preprocess audio to mono / stereo, and resample.
+        audio = preprocess_audio(audio, mono, track.rate, sample_rate, resample_type)
+        # (channels_num, audio_samples) | (audio_samples,)
+
+        hf.create_dataset(name="mixture", data=float32_to_int16(audio), dtype=np.int16)
+
+    print("{} Write to {}, {}".format(track_index, hdf5_path, audio.shape))
 
 
 def preprocess_audio(audio, mono, origin_sr, sr, resample_type):
@@ -88,115 +133,16 @@ def preprocess_audio(audio, mono, origin_sr, sr, resample_type):
     Returns:
         output: ndarray, output audio
     """
-
     if mono:
-        audio = np.mean(audio, axis=0)
-        # (audio_samples,)
+        audio = np.mean(audio, axis=0)[None, :]
+        # (1, audio_samples,)
 
-    output = librosa.core.resample(audio, orig_sr=origin_sr, target_sr=sr, res_type=resample_type)
+    output = librosa.core.resample(
+        audio, orig_sr=origin_sr, target_sr=sr, res_type=resample_type
+    )
     # (channels_num, audio_samples) | (audio_samples,)
 
     return output
-
-
-def create_indexes(args):
-    r"""Create and write out training indexes into disk. In training a source
-    separation system, training indexes will be shuffled and iterated for
-    selecting segments to be mixed. E.g., the training indexes_dict looks like:
-
-        {'vocals': [
-             [./piece1.h5, 0, 132300],
-             [./piece1.h5, 4410, 136710],
-             [./piece1.h5, 8820, 141120],
-             ...
-         ],
-         'accompaniment': [
-             [./piece1.h5, 0, 132300],
-             [./piece1.h5, 4410, 136710],
-             [./piece1.h5, 8820, 141120],
-             ...
-         ]
-        }
-    """
-
-    # Arugments & parameters
-    workspace = args.workspace
-    config_yaml = args.config_yaml
-
-    # Only create indexes for training, because evalution is on entire pieces.
-    split = "train"
-
-    # Read config file.
-    configs = read_yaml(config_yaml)
-
-    sample_rate = configs["sample_rate"]
-    segment_samples = int(configs["segment_seconds"] * sample_rate)
-
-    # Path to write out index.
-    indexes_path = os.path.join(workspace, configs[split]["indexes"])
-    os.makedirs(os.path.dirname(indexes_path), exist_ok=True)
-
-    source_types = configs[split]["source_types"].keys()
-    # E.g., ['vocals', 'accompaniment']
-
-    indexes_dict = {source_type: [] for source_type in source_types}
-    # E.g., indexes_dict will looks like: {
-    #     'vocals': [
-    #         [./piece1.h5, 0, 132300],
-    #         [./piece1.h5, 4410, 136710],
-    #         [./piece1.h5, 8820, 141120],
-    #         ...
-    #     ],
-    #     'accompaniment': [
-    #         [./piece1.h5, 0, 132300],
-    #         [./piece1.h5, 4410, 136710],
-    #         [./piece1.h5, 8820, 141120],
-    #         ...
-    #     ]
-    # }
-
-    # tmp_dict = {source_type: {} for source_type in source_types}
-
-    # Get training indexes for each source type.
-    for source_type in source_types:
-
-        print("--- {} ---".format(source_type))
-
-        dataset_types = configs[split]["source_types"][source_type]
-        # E.g., ['musdb18', ...]
-
-        # Each source can come from mulitple datasets.
-        for dataset_type in dataset_types:
-
-            hdf5s_dir = os.path.join(workspace, dataset_types[dataset_type]["directory"])
-            hop_samples = int(dataset_types[dataset_type]["hop_seconds"] * sample_rate)
-
-            hdf5_names = os.listdir(hdf5s_dir)
-            print("Hdf5 files num: {}".format(len(hdf5_names)))
-
-            # Traverse all packed hdf5 files of a dataset.
-            for n, hdf5_name in enumerate(hdf5_names):
-
-                print(n, hdf5_name)
-                hdf5_path = os.path.join(hdf5s_dir, hdf5_name)
-
-                with h5py.File(hdf5_path, "r") as hf:
-
-                    start_sample = 0
-                    while start_sample + segment_samples < hf[source_type].shape[-1]:
-                        indexes_dict[source_type].append([hdf5_path, start_sample, start_sample + segment_samples])
-
-                        start_sample += hop_samples
-
-                # tmp_dict[source_type][hdf5_path] = [0, start_sample - segment_samples]
-
-        print("Total indexes for {}: {}".format(source_type, len(indexes_dict[source_type])))
-
-    pickle.dump(indexes_dict, open(indexes_path, "wb"))
-    print("Write index dict to {}".format(indexes_path))
-
-    # pickle.dump(tmp_dict, open('tmp.pkl', "wb"))
-    # print("Write to {}".format('tmp.pkl'))
 
 
 if __name__ == "__main__":
@@ -205,7 +151,12 @@ if __name__ == "__main__":
 
     # Pack audios to hdf5 files.
     parser_pack_audios = subparsers.add_parser("pack_audios_to_hdf5s")
-    parser_pack_audios.add_argument("--dataset_dir", type=str, required=True, help="Directory of the MUSDB18 dataset.")
+    parser_pack_audios.add_argument(
+        "--dataset_dir",
+        type=str,
+        required=True,
+        help="Directory of the MUSDB18 dataset.",
+    )
     parser_pack_audios.add_argument(
         "--subset",
         type=str,
@@ -227,22 +178,18 @@ if __name__ == "__main__":
         required=True,
         help="Directory to write out hdf5 files.",
     )
-    parser_pack_audios.add_argument("--sample_rate", type=int, required=True, help="Sample rate.")
-    parser_pack_audios.add_argument("--channels", type=int, required=True, help="Use 1 for mono, 2 for stereo.")
-
-    # Create training indexes.
-    parser_create_indexes = subparsers.add_parser("create_indexes")
-    parser_create_indexes.add_argument("--workspace", type=str, required=True, help="Directory of workspace.")
-    parser_create_indexes.add_argument("--config_yaml", type=str, required=True, help="User defined config file.")
+    parser_pack_audios.add_argument(
+        "--sample_rate", type=int, required=True, help="Sample rate."
+    )
+    parser_pack_audios.add_argument(
+        "--channels", type=int, required=True, help="Use 1 for mono, 2 for stereo."
+    )
 
     # Parse arguments.
     args = parser.parse_args()
 
     if args.mode == "pack_audios_to_hdf5s":
         pack_audios_to_hdf5s(args)
-
-    elif args.mode == "create_indexes":
-        create_indexes(args)
 
     else:
         raise Exception("Incorrect arguments!")
