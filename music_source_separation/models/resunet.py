@@ -17,7 +17,9 @@ class ConvBlockRes(nn.Module):
         padding = [kernel_size[0] // 2, kernel_size[1] // 2]
 
         self.bn1 = nn.BatchNorm2d(in_channels, momentum=momentum)
-        self.abn2 = InPlaceABNSync(num_features=out_channels, momentum=momentum, activation='leaky_relu')
+        self.abn2 = InPlaceABNSync(
+            num_features=out_channels, momentum=momentum, activation='leaky_relu'
+        )
 
         self.conv1 = nn.Conv2d(
             in_channels=in_channels,
@@ -41,7 +43,11 @@ class ConvBlockRes(nn.Module):
 
         if in_channels != out_channels:
             self.shortcut = nn.Conv2d(
-                in_channels=in_channels, out_channels=out_channels, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0)
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=(0, 0),
             )
             self.is_shortcut = True
         else:
@@ -69,14 +75,24 @@ class ConvBlockRes(nn.Module):
 
 
 class EncoderBlockRes4B(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, downsample, activation, momentum):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, downsample, activation, momentum
+    ):
         r"""Encoder block, contains 8 convolutional layers."""
         super(EncoderBlockRes4B, self).__init__()
 
-        self.conv_block1 = ConvBlockRes(in_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block2 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block3 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block4 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
+        self.conv_block1 = ConvBlockRes(
+            in_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block2 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block3 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block4 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
         self.downsample = downsample
 
     def forward(self, x):
@@ -89,7 +105,9 @@ class EncoderBlockRes4B(nn.Module):
 
 
 class DecoderBlockRes4B(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, upsample, activation, momentum):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, upsample, activation, momentum
+    ):
         r"""Decoder block, contains 1 transpose convolutional and 8 convolutional layers."""
         super(DecoderBlockRes4B, self).__init__()
         self.kernel_size = kernel_size
@@ -107,10 +125,18 @@ class DecoderBlockRes4B(nn.Module):
         )
 
         self.bn1 = nn.BatchNorm2d(in_channels, momentum=momentum)
-        self.conv_block2 = ConvBlockRes(out_channels * 2, out_channels, kernel_size, activation, momentum)
-        self.conv_block3 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block4 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block5 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
+        self.conv_block2 = ConvBlockRes(
+            out_channels * 2, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block3 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block4 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block5 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
 
         self.init_weights()
 
@@ -304,7 +330,12 @@ class ResUNet143_DecouplePlusInplaceABN(nn.Module, Base):
         )
 
         self.after_conv2 = nn.Conv2d(
-            in_channels=32, out_channels=channels * 4, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0), bias=True
+            in_channels=32,
+            out_channels=channels * 4,
+            kernel_size=(1, 1),
+            stride=(1, 1),
+            padding=(0, 0),
+            bias=True,
         )
 
         self.init_weights()
@@ -334,7 +365,11 @@ class ResUNet143_DecouplePlusInplaceABN(nn.Module, Base):
 
         # Pad spectrogram to be evenly divided by downsample ratio.
         origin_len = x.shape[2]
-        pad_len = int(np.ceil(x.shape[2] / self.time_downsample_ratio)) * self.time_downsample_ratio - origin_len
+        pad_len = (
+            int(np.ceil(x.shape[2] / self.time_downsample_ratio))
+            * self.time_downsample_ratio
+            - origin_len
+        )
         x = F.pad(x, pad=(0, 0, 0, pad_len))
         # (batch_size, channels, padded_time_steps, freq_bins)
 
@@ -347,9 +382,15 @@ class ResUNet143_DecouplePlusInplaceABN(nn.Module, Base):
         (x1_pool, x1) = self.encoder_block1(x)  # x1_pool: (bs, 32, T / 2, F / 2)
         (x2_pool, x2) = self.encoder_block2(x1_pool)  # x2_pool: (bs, 64, T / 4, F / 4)
         (x3_pool, x3) = self.encoder_block3(x2_pool)  # x3_pool: (bs, 128, T / 8, F / 8)
-        (x4_pool, x4) = self.encoder_block4(x3_pool)  # x4_pool: (bs, 256, T / 16, F / 16)
-        (x5_pool, x5) = self.encoder_block5(x4_pool)  # x5_pool: (bs, 384, T / 32, F / 32)
-        (x6_pool, x6) = self.encoder_block6(x5_pool)  # x6_pool: (bs, 384, T / 32, F / 64)
+        (x4_pool, x4) = self.encoder_block4(
+            x3_pool
+        )  # x4_pool: (bs, 256, T / 16, F / 16)
+        (x5_pool, x5) = self.encoder_block5(
+            x4_pool
+        )  # x5_pool: (bs, 384, T / 32, F / 32)
+        (x6_pool, x6) = self.encoder_block6(
+            x5_pool
+        )  # x6_pool: (bs, 384, T / 32, F / 64)
         (x_center, _) = self.conv_block7a(x6_pool)  # (bs, 384, T / 32, F / 64)
         (x_center, _) = self.conv_block7b(x_center)  # (bs, 384, T / 32, F / 64)
         (x_center, _) = self.conv_block7c(x_center)  # (bs, 384, T / 32, F / 64)

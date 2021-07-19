@@ -1,5 +1,5 @@
 #!/bin/bash
-MUSDB18_DATASET_DIR=${1:-"./datasets/musdb18"}	# Default dataset directory
+MUSDB18_DATASET_DIR=${1:-"./datasets/musdb18"}	# The first argument is dataset directory.
 
 echo "MUSDB18_DATASET_DIR=${MUSDB18_DATASET_DIR}"
 

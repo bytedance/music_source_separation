@@ -3,22 +3,28 @@ import logging
 import os
 import pathlib
 from functools import partial
+from typing import List
 
 import pytorch_lightning as pl
 from pytorch_lightning.plugins import DDPPlugin
 
-from music_source_separation.utils import read_yaml, create_logging, StatisticsContainer
+from music_source_separation.callbacks.callback_evaluate import \
+    CallbackEvaluation
+from music_source_separation.callbacks.callback_save_checkpoints import \
+    CallbackCheckpoint
 from music_source_separation.data.augmentors import Augmentor
-from music_source_separation.data.data_modules import DataModule
+from music_source_separation.data.data_modules import DataModule, Dataset
 from music_source_separation.data.samplers import SegmentSampler
-from music_source_separation.models.lightning_modules import get_model_class, LitSourceSeparation
 from music_source_separation.losses import get_loss_function
+from music_source_separation.models.lightning_modules import (
+    LitSourceSeparation, get_model_class)
 from music_source_separation.optimizers.lr_schedulers import get_lr_lambda
-from music_source_separation.callbacks.callback_save_checkpoints import CallbackCheckpoint
-from music_source_separation.callbacks.callback_evaluate import CallbackEvaluation
+from music_source_separation.utils import (StatisticsContainer, create_logging,
+                                           get_pitch_shift_factor, read_yaml)
 
 
-def get_dirs(workspace, filename, config_yaml, gpus):
+def get_dirs(workspace: str, filename: str, config_yaml: str, gpus: int) -> List[str]:
+    r"""Get directories."""
 
     # save checkpoints dir
     checkpoints_dir = os.path.join(
@@ -31,8 +37,10 @@ def get_dirs(workspace, filename, config_yaml, gpus):
 
     # logs dir
     logs_dir = os.path.join(
-        workspace, "logs", filename, 
-        "config={},gpus={}".format(pathlib.Path(config_yaml).stem, gpus)
+        workspace,
+        "logs",
+        filename,
+        "config={},gpus={}".format(pathlib.Path(config_yaml).stem, gpus),
     )
     os.makedirs(logs_dir, exist_ok=True)
 
@@ -60,9 +68,44 @@ def get_dirs(workspace, filename, config_yaml, gpus):
     return checkpoints_dir, logs_dir, logger, statistics_path
 
 
+def _get_modules(workspace: str, config_yaml: str) -> [SegmentSampler, Dataset]:
+    r"""Get sampler, dataset."""
+
+    configs = read_yaml(config_yaml)
+    indexes_path = os.path.join(workspace, configs['train']['indexes_dict'])
+
+    sample_rate = configs['train']['sample_rate']
+    segment_seconds = configs['train']['segment_seconds']
+    segment_samples = int(segment_seconds * sample_rate)
+    mixaudio_dict = configs['train']['mixaudio']
+    augmentation = configs['train']['augmentation']
+    pitch_shift = augmentation['pitch_shift']
+    ex_segment_samples = int(segment_samples * get_pitch_shift_factor(pitch_shift))
+
+    batch_size = configs['train']['batch_size']
+    steps_per_epoch = configs['train']['steps_per_epoch']
+    mini_data = configs['train']['mini_data']
+
+    # sampler
+    train_sampler = SegmentSampler(
+        indexes_path=indexes_path,
+        segment_samples=ex_segment_samples,
+        mixaudio_dict=mixaudio_dict,
+        batch_size=batch_size,
+        steps_per_epoch=steps_per_epoch,
+    )
+
+    # augmentor
+    augmentor = Augmentor(augmentation=augmentation)
+
+    # dataset
+    train_dataset = Dataset(augmentor, segment_samples)
+
+    return train_sampler, train_dataset
+
+
 def train(args):
-    r"""Train & evaluate and save checkpoints.
-    """
+    r"""Train & evaluate and save checkpoints."""
 
     # arugments & parameters
     workspace = args.workspace
@@ -70,51 +113,20 @@ def train(args):
     config_yaml = args.config_yaml
     filename = args.filename
 
-    num_workers = 8
+    num_workers = 0
     distributed = True if gpus > 1 else False
-    evaluate_device = "cuda" if gpus > 1 else "cpu"
+    evaluate_device = "cuda" if gpus > 0 else "cpu"
 
     # Read config file.
     configs = read_yaml(config_yaml)
     target_source_type = configs['train']['target_source_types'][0]
-    indexes_path = os.path.join(workspace, configs['train']['indexes_dict'])
     sample_rate = configs['train']['sample_rate']
     channels = configs['train']['channels']
     model_type = configs['train']['model_type']
     loss_type = configs['train']['loss_type']
 
-    # if 'max_random_shift' in configs['train']:
-    #     max_random_shift = configs['train']['max_random_shift']
-    # else:
-    #     max_random_shift = None
-    max_random_shift = None
-
-    # if 'sampler_type' in configs['train']:
-    #     Sampler = eval(configs['train']['sampler_type'])
-
-    # else:
-    #     Sampler = SegmentSampler
-    Sampler = SegmentSampler
-
-    mixaudio_dict =  configs['train']['augmentation']['mixaudio']
-
-    random_scale_dict = configs['train']['augmentation']['random_scale'] if \
-        'random_scale' in configs['train']['augmentation'] else None
-
-    # if 'random_scale' in configs['train']['augmentation']:
-    #     random_scale_dict = configs['train']['augmentation']['random_scale']
-    # else:
-    #     random_scale_dict = None
-
-    # if 'return_output_dict' in configs['train']:
-    #     return_output_dict = True
-    # else:
-    #     return_output_dict = False
-
     learning_rate = float(configs['train']['learning_rate'])
-    batch_size = configs['train']['batch_size']
     precision = configs['train']['precision']
-    steps_per_epoch = configs['train']['steps_per_epoch']
     evaluate_step_frequency = configs['train']['evaluate_step_frequency']
     save_step_frequency = configs['train']['save_step_frequency']
     early_stop_steps = configs['train']['early_stop_steps']
@@ -126,52 +138,29 @@ def train(args):
     test_batch_size = configs['evaluate']['batch_size']
 
     test_segment_samples = int(test_segment_seconds * sample_rate)
-    
+
     # paths
-    _many_dirs = get_dirs(workspace, filename, config_yaml, gpus)
-    checkpoints_dir, logs_dir, logger, statistics_path = _many_dirs
+    checkpoints_dir, logs_dir, logger, statistics_path = get_dirs(
+        workspace, filename, config_yaml, gpus
+    )
 
     # statistics container
     statistics_container = StatisticsContainer(statistics_path)
 
-    # augmentor
-    augmentor = Augmentor(random_scale_dict)
+    # sampler and dataset
+    train_sampler, train_dataset = _get_modules(workspace, config_yaml)
 
     # data module
     data_module = DataModule(
-        indexes_path=indexes_path,
-        max_random_shift=max_random_shift,
-        mixaudio_dict=mixaudio_dict,
-        augmentor=augmentor,
-        Sampler=Sampler,
-        batch_size=batch_size,
-        steps_per_epoch=steps_per_epoch,
+        train_sampler=train_sampler,
+        train_dataset=train_dataset,
         num_workers=num_workers,
         distributed=distributed,
     )
 
-    # data_module.setup()
-    # for e in data_module.train_dataloader():
-    #     from IPython import embed; embed(using=False); os._exit(0)
-    #     import soundfile
-    #     soundfile.write(file='_zz.wav', data=e['accompaniment'][2].data.cpu().numpy().T, samplerate=44100)
-    #     import librosa
-    #     audio, fs = librosa.load('_zz.wav', sr=None, mono=False)
-
     # model
     Model = get_model_class(model_type)
     model = Model(channels)
-
-    # if resume_checkpoint_path:
-    #     logging.info('Load resume model from {}'.format(resume_checkpoint_path))
-    #     resume_checkpoint = torch.load(resume_checkpoint_path)
-    #     model.load_state_dict(resume_checkpoint['model'])
-    #     resume_iteration = resume_checkpoint['iteration']
-    #     statistics_container.load_state_dict(resume_iteration)
-    #     iteration = resume_iteration
-    # else:
-    #     resume_iteration = 0
-    #     iteration = 0
 
     # loss function
     loss_function = get_loss_function(loss_type)
@@ -198,15 +187,12 @@ def train(args):
         statistics_container=statistics_container,
     )
 
-    callbacks = [callback_checkpoints, callback_eval_test]
-    
-    # callbacks = []
+    # callbacks = [callback_checkpoints, callback_eval_test]
+    callbacks = []
 
     # learning rate reduce function
     lr_lambda = partial(
-        get_lr_lambda, 
-        warm_up_steps=warm_up_steps, 
-        reduce_lr_steps=reduce_lr_steps
+        get_lr_lambda, warm_up_steps=warm_up_steps, reduce_lr_steps=reduce_lr_steps
     )
 
     # PL model
@@ -215,7 +201,7 @@ def train(args):
         model=model,
         loss_function=loss_function,
         learning_rate=learning_rate,
-        lr_lambda=lr_lambda
+        lr_lambda=lr_lambda,
     )
 
     # trainer
@@ -229,8 +215,8 @@ def train(args):
         precision=precision,
         replace_sampler_ddp=False,
         plugins=[DDPPlugin(find_unused_parameters=True)],
-        profiler='simple', 
-    ) 
+        profiler='simple',
+    )
 
     # Fit, evaluate, and save checkpoints.
     trainer.fit(pl_model, data_module)

@@ -7,7 +7,7 @@ from torchlibrosa.stft import magphase
 
 
 def init_layer(layer):
-    """Initialize a Linear or Convolutional layer. """
+    """Initialize a Linear or Convolutional layer."""
     nn.init.xavier_uniform_(layer.weight)
 
     if hasattr(layer, "bias"):
@@ -16,7 +16,7 @@ def init_layer(layer):
 
 
 def init_bn(bn):
-    """Initialize a Batchnorm layer. """
+    """Initialize a Batchnorm layer."""
     bn.bias.data.fill_(0.0)
     bn.weight.data.fill_(1.0)
 
@@ -54,7 +54,7 @@ class Base:
         """Waveform to spectrogram.
 
         Args:
-          input: (batch_size, segment_samples, channels_num)
+          input: (batch_size, channels_num, segment_samples)
 
         Outputs:
           output: (batch_size, channels_num, time_steps, freq_bins)
@@ -78,7 +78,7 @@ class Base:
         """Waveform to spectrogram.
 
         Args:
-          input: (batch_size, segment_samples, channels_num)
+          input: (batch_size, channels_num, segment_samples)
 
         Outputs:
           output: (batch_size, channels_num, time_steps, freq_bins)
@@ -99,7 +99,7 @@ class Base:
           spectrogram: (batch_size, channels_num, time_steps, freq_bins)
 
         Outputs:
-          output: (batch_size, segment_samples, channels_num)
+          output: (batch_size, channels_num, segment_samples)
         """
         channels_num = input.shape[1]
         wav_list = []

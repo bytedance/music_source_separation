@@ -1,10 +1,10 @@
-import os
-import logging
-import yaml
 import datetime
+import logging
+import os
 import pickle
 
 import numpy as np
+import yaml
 
 
 def create_logging(log_dir, filemode):
@@ -51,7 +51,9 @@ def mix_audio_from_same_source(data_dict, input_sources, mixaudio):
     for source in input_sources:
         (N, segment_samples, channels_num) = data_dict[source].shape
         data_dict[source] = np.sum(
-            data_dict[source].reshape(mixaudio, N // mixaudio, segment_samples, channels_num),
+            data_dict[source].reshape(
+                mixaudio, N // mixaudio, segment_samples, channels_num
+            ),
             axis=0,
         )
 
@@ -65,6 +67,11 @@ def magnitude_to_db(x):
 
 def db_to_magnitude(x):
     return 10.0 ** (x / 20)
+
+
+def get_pitch_shift_factor(shift_pitch: float) -> float:
+    r"""The factor of the audio length to be scaled."""
+    return 2 ** (shift_pitch / 12)
 
 
 class StatisticsContainer(object):

@@ -9,11 +9,8 @@ import soundfile
 
 
 class Separator:
-    def __init__(self, 
-        model: nn.Module, 
-        segment_samples: int, 
-        batch_size: int, 
-        device: str
+    def __init__(
+        self, model: nn.Module, segment_samples: int, batch_size: int, device: str
     ):
         r"""Separate to separate an audio clip into a target source.
 
@@ -41,7 +38,7 @@ class Separator:
 
         audio_samples = audio.shape[-1]
 
-        # Pad the audio with zero in the end so that the length of audio can be 
+        # Pad the audio with zero in the end so that the length of audio can be
         # evenly divided by segment_samples.
         audio = self.pad_audio(audio)
 
@@ -59,13 +56,13 @@ class Separator:
         sep_audio = self.deframe(sep_segments)
         # (channels_num, padded_audio_samples)
 
-        sep_audio = sep_audio[:, 0 : audio_samples]
+        sep_audio = sep_audio[:, 0:audio_samples]
         # (channels_num, audio_samples)
 
         return sep_audio
 
     def pad_audio(self, audio):
-        r"""Pad the audio with zero in the end so that the length of audio can 
+        r"""Pad the audio with zero in the end so that the length of audio can
         be evenly divided by segment_samples.
 
         Args:
@@ -74,7 +71,7 @@ class Separator:
         Returns:
             padded_audio: (channels_num, audio_samples)
         """
-        
+
         channels_num, audio_samples = audio.shape
 
         # Number of segments
@@ -82,7 +79,9 @@ class Separator:
 
         pad_samples = segments_num * self.segment_samples - audio_samples
 
-        padded_audio = np.concatenate((audio, np.zeros((channels_num, pad_samples))), axis=1)
+        padded_audio = np.concatenate(
+            (audio, np.zeros((channels_num, pad_samples))), axis=1
+        )
         # (channels_num, padded_audio_samples)
 
         return padded_audio
@@ -135,7 +134,11 @@ class Separator:
         output.append(segments[0, :, 0 : int(segment_samples * 0.75)])
 
         for i in range(1, segments_num - 1):
-            output.append(segments[i, :, int(segment_samples * 0.25) : int(segment_samples * 0.75)])
+            output.append(
+                segments[
+                    i, :, int(segment_samples * 0.25) : int(segment_samples * 0.75)
+                ]
+            )
 
         output.append(segments[-1, :, int(segment_samples * 0.25) :])
 
@@ -187,7 +190,7 @@ class Separator:
 
         for key in output_dict.keys():
             output_dict[key] = np.concatenate(output_dict[key], axis=0)
-        
+
         return output_dict
 
     def _append_to_dict(self, dict, key, value):
@@ -205,8 +208,8 @@ def inference(args):
     select = args.select
     sample_rate = 44100
     segment_samples = int(30 * sample_rate)
-    batch_size = 1 
-    device = "cuda" 
+    batch_size = 1
+    device = "cuda"
 
     # Todo
 
@@ -227,7 +230,6 @@ def inference(args):
     # # # Write out separated audio
     # soundfile.write(file=output_path, data=sep_wav.T, samplerate=sample_rate)
     # soundfile.write(file='_zz2.wav', data=res_wav.T, samplerate=sample_rate)
-    
 
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch.optim as optim
@@ -21,6 +23,7 @@ class LitSourceSeparation(pl.LightningModule):
             model: nn.Module
             loss_function: func
             learning_rate: float
+            lr_lambda: func
         """
         super().__init__()
         self.target_source_type = target_source_type
@@ -29,7 +32,7 @@ class LitSourceSeparation(pl.LightningModule):
         self.learning_rate = learning_rate
         self.lr_lambda = lr_lambda
 
-    def training_step(self, batch_data_dict, batch_idx):
+    def training_step(self, batch_data_dict: Dict, batch_idx: int) -> float:
         r"""Forward a mini-batch data to model, calculate loss function, and
         train for one step. A mini-batch data is evenly distributed to multiple
         devices (if there are) for parallel training.
@@ -94,7 +97,9 @@ def get_model_class(model_type):
         nn.Module
     """
     if model_type == 'ResUNet143_DecouplePlusInplaceABN':
-        from music_source_separation.models.resunet import ResUNet143_DecouplePlusInplaceABN
+        from music_source_separation.models.resunet import (
+            ResUNet143_DecouplePlusInplaceABN,
+        )
 
         return ResUNet143_DecouplePlusInplaceABN
 

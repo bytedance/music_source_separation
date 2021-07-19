@@ -1,5 +1,5 @@
 [tool.black]
-line-length = 120
+line-length = 88
 target-version = ['py37']
 skip-string-normalization = true
 include = '\.pyi?$'
@@ -17,7 +17,5 @@ exclude = '''
     | build
     | dist
   )/
-  | exclude_example_foo.py # also separately exclude a file named foo.py in
-                           # the root of the project
 )
 '''
