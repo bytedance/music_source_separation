@@ -1,0 +1,14 @@
+---
+sample_rate: 44100
+segment_seconds: 3.0
+train:
+    source_types:
+        vocals:
+            musdb18:
+                directory: "hdf5s/musdb18/sr=44100_ch=2/train/full_train"
+                hop_seconds: 0.1
+        accompaniment:
+            musdb18:
+                directory: "hdf5s/musdb18/sr=44100_ch=2/train/full_train"
+                hop_seconds: 0.1
+    indexes: "indexes/musdb18/sr=44100_ch=2/train/full_train/vocals_accompaniment.pkl"

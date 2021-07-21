@@ -8,10 +8,11 @@ from typing import List
 import pytorch_lightning as pl
 from pytorch_lightning.plugins import DDPPlugin
 
-from music_source_separation.callbacks.callback_evaluate import \
-    CallbackEvaluation
-from music_source_separation.callbacks.callback_save_checkpoints import \
-    CallbackCheckpoint
+from music_source_separation.callbacks import get_callbacks
+# from music_source_separation.callbacks.callback_evaluate import \
+    # CallbackEvaluation
+# from music_source_separation.callbacks.callback_save_checkpoints import \
+    # CallbackCheckpoint
 from music_source_separation.data.augmentors import Augmentor
 from music_source_separation.data.data_modules import DataModule, Dataset
 from music_source_separation.data.samplers import SegmentSampler
@@ -23,13 +24,14 @@ from music_source_separation.utils import (StatisticsContainer, create_logging,
                                            get_pitch_shift_factor, read_yaml)
 
 
-def get_dirs(workspace: str, filename: str, config_yaml: str, gpus: int) -> List[str]:
+def get_dirs(workspace: str, task_name: str, filename: str, config_yaml: str, gpus: int) -> List[str]:
     r"""Get directories."""
 
     # save checkpoints dir
     checkpoints_dir = os.path.join(
         workspace,
         "checkpoints",
+        task_name,
         filename,
         "config={},gpus={}".format(pathlib.Path(config_yaml).stem, gpus),
     )
@@ -39,6 +41,7 @@ def get_dirs(workspace: str, filename: str, config_yaml: str, gpus: int) -> List
     logs_dir = os.path.join(
         workspace,
         "logs",
+        task_name,
         filename,
         "config={},gpus={}".format(pathlib.Path(config_yaml).stem, gpus),
     )
@@ -52,13 +55,14 @@ def get_dirs(workspace: str, filename: str, config_yaml: str, gpus: int) -> List
     tb_logs_dir = os.path.join(workspace, "tensorboard_logs")
     os.makedirs(tb_logs_dir, exist_ok=True)
 
-    experiment_name = os.path.join(filename, pathlib.Path(config_yaml).stem)
+    experiment_name = os.path.join(task_name, filename, pathlib.Path(config_yaml).stem)
     logger = pl.loggers.TensorBoardLogger(save_dir=tb_logs_dir, name=experiment_name)
 
     # statistics path
     statistics_path = os.path.join(
         workspace,
         "statistics",
+        task_name,
         filename,
         "config={},gpus={}".format(pathlib.Path(config_yaml).stem, gpus),
         "statistics.pkl",
@@ -104,6 +108,51 @@ def _get_modules(workspace: str, config_yaml: str) -> [SegmentSampler, Dataset]:
     return train_sampler, train_dataset
 
 
+
+
+
+def _get_callbacks(config_yaml, workspace, checkpoints_dir, statistics_path, logger, model, evaluate_device):
+
+    configs = read_yaml(config_yaml)
+    target_source_type = configs['train']['target_source_types'][0]
+    test_hdf5s_dir = os.path.join(workspace, configs['evaluate']['test'])
+    test_segment_seconds = configs['evaluate']['segment_seconds']
+    sample_rate = configs['train']['sample_rate']
+    test_segment_samples = int(test_segment_seconds * sample_rate)
+    test_batch_size = configs['evaluate']['batch_size']
+
+    evaluate_step_frequency = configs['train']['evaluate_step_frequency']
+    save_step_frequency = configs['train']['save_step_frequency']
+    
+    # statistics container
+    statistics_container = StatisticsContainer(statistics_path)
+
+    # save checkpoint callback
+    callback_checkpoints = CallbackCheckpoint(
+        model=model,
+        checkpoints_dir=checkpoints_dir,
+        save_step_frequency=save_step_frequency,
+    )
+    
+    # evaluation callback
+    callback_eval_test = CallbackEvaluation(
+        model=model,
+        target_source_type=target_source_type,
+        hdf5s_dir=test_hdf5s_dir,
+        split='test',
+        segment_samples=test_segment_samples,
+        batch_size=test_batch_size,
+        device=evaluate_device,
+        evaluate_step_frequency=evaluate_step_frequency,
+        logger=logger,
+        statistics_container=statistics_container,
+    )
+
+    callbacks = [callback_checkpoints, callback_eval_test]
+    # callbacks = []
+
+    return callbacks
+
 def train(args):
     r"""Train & evaluate and save checkpoints."""
 
@@ -119,7 +168,10 @@ def train(args):
 
     # Read config file.
     configs = read_yaml(config_yaml)
-    target_source_type = configs['train']['target_source_types'][0]
+    task_name = configs['task_name']
+    # target_source_type = configs['train']['target_source_types'][0]
+    target_source_types = configs['train']['target_source_types']
+    target_sources_num = len(target_source_types)
     sample_rate = configs['train']['sample_rate']
     channels = configs['train']['channels']
     model_type = configs['train']['model_type']
@@ -133,19 +185,10 @@ def train(args):
     warm_up_steps = configs['train']['warm_up_steps']
     reduce_lr_steps = configs['train']['reduce_lr_steps']
 
-    test_hdf5s_dir = os.path.join(workspace, configs['evaluate']['test'])
-    test_segment_seconds = configs['evaluate']['segment_seconds']
-    test_batch_size = configs['evaluate']['batch_size']
-
-    test_segment_samples = int(test_segment_seconds * sample_rate)
-
     # paths
     checkpoints_dir, logs_dir, logger, statistics_path = get_dirs(
-        workspace, filename, config_yaml, gpus
+        workspace, task_name, filename, config_yaml, gpus
     )
-
-    # statistics container
-    statistics_container = StatisticsContainer(statistics_path)
 
     # sampler and dataset
     train_sampler, train_dataset = _get_modules(workspace, config_yaml)
@@ -160,34 +203,13 @@ def train(args):
 
     # model
     Model = get_model_class(model_type)
-    model = Model(channels)
+    model = Model(input_channels=channels, target_sources_num=target_sources_num)
 
     # loss function
     loss_function = get_loss_function(loss_type)
 
     # callbacks
-    # save checkpoint callback
-    callback_checkpoints = CallbackCheckpoint(
-        model=model,
-        checkpoints_dir=checkpoints_dir,
-        save_step_frequency=save_step_frequency,
-    )
-
-    # evaluation callback
-    callback_eval_test = CallbackEvaluation(
-        model=model,
-        target_source_type=target_source_type,
-        hdf5s_dir=test_hdf5s_dir,
-        split='test',
-        segment_samples=test_segment_samples,
-        batch_size=test_batch_size,
-        device=evaluate_device,
-        evaluate_step_frequency=evaluate_step_frequency,
-        logger=logger,
-        statistics_container=statistics_container,
-    )
-
-    # callbacks = [callback_checkpoints, callback_eval_test]
+    # callbacks = get_callbacks(task_name, config_yaml, workspace, checkpoints_dir, statistics_path, logger, model, evaluate_device)
     callbacks = []
 
     # learning rate reduce function
@@ -196,10 +218,24 @@ def train(args):
     )
 
     # PL model
+    '''
     pl_model = LitSourceSeparation(
         target_source_type=target_source_type,
         model=model,
         loss_function=loss_function,
+        learning_rate=learning_rate,
+        lr_lambda=lr_lambda,
+    )
+    '''
+
+    from music_source_separation.models.lightning_modules import Musdb18BatchDataPreprocessor
+    batch_data_preprocessor = Musdb18BatchDataPreprocessor(target_source_types)
+
+    pl_model = LitSourceSeparation(
+        # target_source_types=target_source_types,
+        batch_data_preprocessor=batch_data_preprocessor,
+        model=model,
+        loss_function=loss_function, 
         learning_rate=learning_rate,
         lr_lambda=lr_lambda,
     )

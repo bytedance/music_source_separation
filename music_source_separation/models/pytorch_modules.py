@@ -50,6 +50,7 @@ class Base:
         sin = imag / mag
         return mag, cos, sin
 
+    '''
     def wav_to_spectrogram_phase(self, input, eps=1e-10):
         """Waveform to spectrogram.
 
@@ -73,7 +74,34 @@ class Base:
         coss = torch.cat(cos_list, dim=1)
         sins = torch.cat(sin_list, dim=1)
         return sps, coss, sins
+    '''
 
+    def wav_to_spectrogram_phase(self, input, eps=1e-10):
+        """Waveform to spectrogram.
+
+        Args:
+          input: (batch_size, channels_num, segment_samples)
+
+        Outputs:
+          output: (batch_size, channels_num, time_steps, freq_bins)
+        """
+    
+        batch_size, channels_num, segment_samples = input.shape
+
+        # Reshape input because the following spectrogram function requires 
+        # input size of (n, segments_num)
+        x = input.reshape(batch_size * channels_num, segment_samples)
+
+        sps, coss, sins = self.spectrogram_phase(x, eps=eps)
+
+        _, _, time_steps, freq_bins = sps.shape
+        sps = sps.reshape(batch_size, channels_num, time_steps, freq_bins)
+        coss = coss.reshape(batch_size, channels_num, time_steps, freq_bins)
+        sins = sins.reshape(batch_size, channels_num, time_steps, freq_bins)
+
+        return sps, coss, sins
+
+    '''
     def wav_to_spectrogram(self, input, eps=0.0):
         """Waveform to spectrogram.
 
@@ -90,7 +118,9 @@ class Base:
 
         output = torch.cat(sp_list, dim=1)
         return output
-
+    '''
+    
+    '''
     def spectrogram_to_wav(self, input, spectrogram, length=None):
         """Spectrogram to waveform.
 
@@ -115,4 +145,49 @@ class Base:
             )
 
         output = torch.stack(wav_list, dim=1)
+        return output
+    '''
+
+class Subband:
+    def __init__(self, subbands_num):
+        self.subbands_num = subbands_num
+
+    def analysis(self, x):
+        r"""Split time-frequency representation into subbands. Stack the 
+        subbands to the channel dimension.
+
+        Args:
+            x: (batch_size, channels_num, time_steps, freq_bins)
+
+        Returns:
+            output: (batch_size, channels_num * subbands_num, time_steps, freq_bins // subbands_num)
+        """
+        batch_size, channels_num, time_steps, freq_bins = x.shape
+
+        x = x.reshape(batch_size, channels_num, time_steps, self.subbands_num, freq_bins // self.subbands_num)
+        x = x.transpose(2, 3)
+        output = x.reshape(batch_size, channels_num * self.subbands_num, time_steps, freq_bins // self.subbands_num)
+
+        return output
+
+    def synthesis(self, x):
+        r"""Synthesis subband time-frequency representations into original 
+        time-frequency representation.
+
+        Args:
+            x: (batch_size, channels_num * subbands_num, time_steps, freq_bins // subbands_num)
+
+        Returns:
+            output: (batch_size, channels_num, time_steps, freq_bins)
+        """
+
+        batch_size, subband_channels_num, time_steps, subband_freq_bins = x.shape
+
+        channels_num = subband_channels_num // self.subbands_num
+        freq_bins = subband_freq_bins * self.subbands_num
+
+        x = x.reshape(batch_size, channels_num, self.subbands_num, time_steps, freq_bins // self.subbands_num)
+        x = x.transpose(2, 3)
+        output = x.reshape(batch_size, channels_num, time_steps, freq_bins)
+
         return output

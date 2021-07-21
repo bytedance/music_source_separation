@@ -133,7 +133,7 @@ def preprocess_audio(audio, mono, origin_sr, sr, resample_type):
     Returns:
         output: ndarray, output audio
     """
-    if mono:
+    if audio.ndim == 1:
         audio = np.mean(audio, axis=0)[None, :]
         # (1, audio_samples,)
 

@@ -1,20 +1,70 @@
-import h5py
+import pathlib
+import numpy as np
+import museval
+import time
 import logging
 import os
-import pathlib
-import time
-
-import museval
-import numpy as np
-import pytorch_lightning as pl
+import h5py
 import torch.nn as nn
+import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_only
 
-from music_source_separation.utils import int16_to_float32, StatisticsContainer
+from music_source_separation.callbacks.base_callbacks import SaveCheckpointsCallback
+from music_source_separation.utils import read_yaml, StatisticsContainer, int16_to_float32
 from music_source_separation.inference import Separator
 
 
-class CallbackEvaluation(pl.Callback):
+def get_musdb18_callbacks(
+    config_yaml: str, 
+    workspace: str, 
+    checkpoints_dir: str, 
+    statistics_path: str, 
+    logger: pl.loggers.TensorBoardLogger, 
+    model: nn.Module, 
+    evaluate_device: str
+):
+
+    configs = read_yaml(config_yaml)
+    target_source_type = configs['train']['target_source_types'][0]
+    test_hdf5s_dir = os.path.join(workspace, configs['evaluate']['test'])
+    test_segment_seconds = configs['evaluate']['segment_seconds']
+    sample_rate = configs['train']['sample_rate']
+    test_segment_samples = int(test_segment_seconds * sample_rate)
+    test_batch_size = configs['evaluate']['batch_size']
+
+    evaluate_step_frequency = configs['train']['evaluate_step_frequency']
+    save_step_frequency = configs['train']['save_step_frequency']
+    
+    # save checkpoint callback
+    save_checkpoints_callback = SaveCheckpointsCallback(
+        model=model,
+        checkpoints_dir=checkpoints_dir,
+        save_step_frequency=save_step_frequency,
+    )
+
+    # statistics container
+    statistics_container = StatisticsContainer(statistics_path)
+    
+    # evaluation callback
+    evaluate_test_callback = EvaluationCallback(
+        model=model,
+        target_source_type=target_source_type,
+        hdf5s_dir=test_hdf5s_dir,
+        split='test',
+        segment_samples=test_segment_samples,
+        batch_size=test_batch_size,
+        device=evaluate_device,
+        evaluate_step_frequency=evaluate_step_frequency,
+        logger=logger,
+        statistics_container=statistics_container,
+    )
+
+    callbacks = [save_checkpoints_callback, evaluate_test_callback]
+
+    return callbacks
+
+
+class EvaluationCallback(pl.Callback):
     def __init__(
         self,
         model: nn.Module,
@@ -57,7 +107,7 @@ class CallbackEvaluation(pl.Callback):
         self.separator = Separator(model, self.segment_samples, batch_size, device)
 
     @rank_zero_only
-    def on_batch_end(self, trainer: pl.Trainer, _):
+    def on_batch_end(self, trainer: pl.Trainer, _) -> None:
         r"""Evaluate separation SDRs of audio recordings."""
 
         global_step = trainer.global_step

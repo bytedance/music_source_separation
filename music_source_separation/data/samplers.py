@@ -77,7 +77,7 @@ class SegmentSampler:
 
         while True:
             batch_meta_dict = {source_type: [] for source_type in self.source_types}
-
+            
             for source_type in self.source_types:
 
                 # Loop until get a mini-batch.

@@ -68,12 +68,19 @@ class Augmentor:
             pitch_shift_factor = get_pitch_shift_factor(rand_pitch)
             dummy_sample_rate = 20000   # Dummy constant.
 
+            channels_num = waveform.shape[0]
+            if channels_num == 1:
+                waveform = np.squeeze(waveform)
+
             new_waveform = librosa.resample(
                 y=waveform,
                 orig_sr=dummy_sample_rate,
                 target_sr=dummy_sample_rate / pitch_shift_factor,
                 res_type='linear',
-                axis=1,
+                axis=-1,
             )
 
+            if channels_num == 1:
+                new_waveform = new_waveform[None, :]
+        
         return new_waveform

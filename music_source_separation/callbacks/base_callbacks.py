@@ -7,7 +7,7 @@ import torch.nn as nn
 from pytorch_lightning.utilities import rank_zero_only
 
 
-class CallbackCheckpoint(pl.Callback):
+class SaveCheckpointsCallback(pl.Callback):
     def __init__(
         self,
         model: nn.Module,
@@ -27,7 +27,7 @@ class CallbackCheckpoint(pl.Callback):
         os.makedirs(self.checkpoints_dir, exist_ok=True)
 
     @rank_zero_only
-    def on_batch_end(self, trainer: pl.Trainer, _):
+    def on_batch_end(self, trainer: pl.Trainer, _) -> None:
         r"""Save checkpoint."""
         global_step = trainer.global_step
 

@@ -43,9 +43,24 @@ def int16_to_float32(x):
 
 
 def read_yaml(config_yaml):
-    with open(config_yaml, "r") as fr:
-        return yaml.load(fr, Loader=yaml.FullLoader)
 
+    with open(config_yaml, "r") as fr:
+        configs = yaml.load(fr, Loader=yaml.FullLoader)
+
+    check_configs_gramma(configs)
+
+    return configs
+
+def check_configs_gramma(configs):
+
+    input_source_types = configs['train']['input_source_types']
+    mixaudio_source_types = list(configs['train']['mixaudio'].keys())
+
+    assert input_source_types == mixaudio_source_types, r"Check your config \
+        file! The keys in \
+        configs['train']['mixaudio'] must match the items in \
+        configs['train']['input_source_types']!"
+        
 
 def mix_audio_from_same_source(data_dict, input_sources, mixaudio):
     for source in input_sources:
@@ -95,6 +110,7 @@ class StatisticsContainer(object):
         logging.info("    Dump statistics to {}".format(self.statistics_path))
         logging.info("    Dump statistics to {}".format(self.backup_statistics_path))
 
+    '''
     def load_state_dict(self, resume_steps):
         self.statistics_dict = pickle.load(open(self.statistics_path, "rb"))
 
@@ -106,3 +122,4 @@ class StatisticsContainer(object):
                     resume_statistics_dict[key].append(statistics)
 
         self.statistics_dict = resume_statistics_dict
+    '''
