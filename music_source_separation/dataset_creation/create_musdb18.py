@@ -10,12 +10,11 @@ import numpy as np
 
 from music_source_separation.utils import float32_to_int16
 
-
 # Source types of the MUSDB18 dataset.
 SOURCE_TYPES = ["vocals", "drums", "bass", "other", "accompaniment"]
 
 
-def pack_audios_to_hdf5s(args):
+def pack_audios_to_hdf5s(args) -> None:
     r"""Pack (resampled) audio files into hdf5 files to speed up loading."""
     # arguments & parameters
     dataset_dir = args.dataset_dir
@@ -66,7 +65,7 @@ def pack_audios_to_hdf5s(args):
     print("Pack hdf5 time: {:.3f} s".format(time.time() - pack_hdf5s_time))
 
 
-def write_single_audio_to_hdf5(param):
+def write_single_audio_to_hdf5(param) -> None:
     r"""Write single audio into hdf5 file."""
     (
         dataset_dir,
@@ -113,14 +112,14 @@ def write_single_audio_to_hdf5(param):
 
         # Preprocess audio to mono / stereo, and resample.
         audio = preprocess_audio(audio, mono, track.rate, sample_rate, resample_type)
-        # (channels_num, audio_samples) | (audio_samples,)
+        # (channels_num, audio_samples)
 
         hf.create_dataset(name="mixture", data=float32_to_int16(audio), dtype=np.int16)
 
     print("{} Write to {}, {}".format(track_index, hdf5_path, audio.shape))
 
 
-def preprocess_audio(audio, mono, origin_sr, sr, resample_type):
+def preprocess_audio(audio, mono, origin_sr, sr, resample_type) -> np.array:
     r"""Preprocess audio to mono / stereo, and resample.
 
     Args:
@@ -140,7 +139,7 @@ def preprocess_audio(audio, mono, origin_sr, sr, resample_type):
     output = librosa.core.resample(
         audio, orig_sr=origin_sr, target_sr=sr, res_type=resample_type
     )
-    # (channels_num, audio_samples) | (audio_samples,)
+    # (channels_num, audio_samples)
 
     return output
 

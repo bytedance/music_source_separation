@@ -7,24 +7,24 @@ import h5py
 from music_source_separation.utils import read_yaml
 
 
-def create_indexes(args):
-    r"""Create and write out training indexes into disk. In training a source
-    separation system, training indexes will be shuffled and iterated for
-    selecting segments to be mixed. E.g., the training indexes_dict looks like:
-
-        {'vocals': [
-             [./piece1.h5, 0, 132300],
-             [./piece1.h5, 4410, 136710],
-             [./piece1.h5, 8820, 141120],
-             ...
-         ],
-         'accompaniment': [
-             [./piece1.h5, 0, 132300],
-             [./piece1.h5, 4410, 136710],
-             [./piece1.h5, 8820, 141120],
-             ...
-         ]
-        }
+def create_indexes(args) -> None:
+    r"""Create and write out training indexes into disk. The indexes may contain
+    information from multiple datasets. During training, training indexes will
+    be shuffled and iterated for selecting segments to be mixed. E.g., the
+    training indexes_dict looks like: {
+        'vocals': [
+            [./piece1.h5, 0, 132300],
+            [./piece1.h5, 4410, 136710],
+            [./piece1.h5, 8820, 141120],
+            ...
+        ],
+        'accompaniment': [
+            [./piece1.h5, 0, 132300],
+            [./piece1.h5, 4410, 136710],
+            [./piece1.h5, 8820, 141120],
+            ...
+        ]
+    }
     """
     # Arugments & parameters
     workspace = args.workspace
@@ -62,8 +62,6 @@ def create_indexes(args):
     #     ]
     # }
 
-    # tmp_dict = {source_type: {} for source_type in source_types}
-
     # Get training indexes for each source type.
     for source_type in source_types:
 
@@ -78,6 +76,7 @@ def create_indexes(args):
             hdf5s_dir = os.path.join(
                 workspace, dataset_types[dataset_type]["directory"]
             )
+
             hop_samples = int(dataset_types[dataset_type]["hop_seconds"] * sample_rate)
 
             hdf5_names = sorted(os.listdir(hdf5s_dir))
@@ -99,8 +98,8 @@ def create_indexes(args):
 
                         start_sample += hop_samples
 
-                    # If the audio length is shorter than the segment length, 
-                    # then use the audio as a segment.
+                    # If the audio length is shorter than the segment length,
+                    # then use the entire audio as a segment.
                     if start_sample == 0:
                         indexes_dict[source_type].append(
                             [hdf5_path, start_sample, start_sample + segment_samples]

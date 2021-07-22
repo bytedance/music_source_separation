@@ -10,7 +10,7 @@ train:
     sample_rate: 44100
     channels: 1
     segment_seconds: 3.0
-    model_type: ResUNet143_DecouplePlusInplaceABN
+    model_type: UNet
     loss_type: l1_wav
     mini_data: False
     mixaudio:
@@ -19,7 +19,7 @@ train:
     augmentation:
         pitch_shift: 0
     learning_rate: 1e-3
-    batch_size: 8
+    batch_size: 16
     precision: 32
     steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
     evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.
@@ -31,7 +31,8 @@ train:
     resume_checkpoint: ""
 
 evaluate:
-    # train: "hdf5s/musdb18/sr=44100_ch=2/train/full_train"
-    # test: "hdf5s/musdb18/sr=44100_ch=2/test"
-    # segment_seconds: 30.0
+    segment_seconds: 3.0
+    test:
+        clean_dir: "clean_testset_wav"
+        noisy_dir: "noisy_testset_wav"
     batch_size: 1

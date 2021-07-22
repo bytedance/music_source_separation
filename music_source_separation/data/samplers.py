@@ -1,5 +1,5 @@
 import pickle
-from typing import List, Dict
+from typing import Dict, List
 
 import numpy as np
 import torch.distributed as dist
@@ -77,8 +77,9 @@ class SegmentSampler:
 
         while True:
             batch_meta_dict = {source_type: [] for source_type in self.source_types}
-            
+
             for source_type in self.source_types:
+                # E.g., ['vocals', 'accompaniment']
 
                 # Loop until get a mini-batch.
                 while len(batch_meta_dict[source_type]) != batch_size:

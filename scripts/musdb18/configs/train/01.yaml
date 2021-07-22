@@ -10,7 +10,7 @@ train:
     sample_rate: 44100
     channels: 2
     segment_seconds: 3.0
-    model_type: ResUNet143_DecouplePlusInplaceABN
+    model_type: UNet
     loss_type: l1_wav
     mini_data: False
     mixaudio:
@@ -18,8 +18,13 @@ train:
         accompaniment: 2
     augmentation:
         pitch_shift: 0
+        magnitude_scale:
+            lower_db: -20
+            higher_db: 20
+    batch_data_preprocessor: BasicBatchDataPreprocessor
+    evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
-    batch_size: 8
+    batch_size: 16
     precision: 32
     steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
     evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.

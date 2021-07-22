@@ -119,42 +119,10 @@ class Musdb18BatchDataPreprocessor:
         return mixtures, sources, conditions, extra_conditions
 '''
 
-class Musdb18BatchDataPreprocessor:
-    def __init__(self, target_source_types):
-        self.target_source_types = target_source_types
 
-    def __call__(self, batch_data_dict):
+# return mixtures, targets, conditions
 
-        batch_size = batch_data_dict['mixture'].shape[0]
-
-        mixtures = batch_data_dict['mixture']
-        targets = torch.cat([batch_data_dict[source_type] for source_type in self.target_source_types], dim=1)
-
-        return mixtures, targets
-
-
-class Musdb18BatchDataPreprocessor2:
-    def __init__(self, target_source_types):
-        self.target_source_types = target_source_types
-
-    def __call__(self, batch_data_dict):
-
-        batch_size = batch_data_dict['mixture'].shape[0]
-        target_sources_num = len(self.target_source_types)
-
-        assert batch_size % target_sources_num == 0
-
-        targets = []
-        for n in range(batch_size):
-            source_type = self.target_source_types[n % target_sources_num]
-            targets.append(batch_data_dict[source_type])
-
-        targets = torch.cat(targets, dim=0)
-
-        return mixtures, targets
-
-
-
+'''
 class LitSourceSeparation(pl.LightningModule):
     def __init__(
         self,
@@ -233,6 +201,90 @@ class LitSourceSeparation(pl.LightningModule):
         }
 
         return [optimizer], [scheduler]
+'''
+
+
+class LitSourceSeparation(pl.LightningModule):
+    def __init__(
+        self,
+        # target_source_types: List[str],
+        batch_data_preprocessor,
+        model: nn.Module,
+        loss_function,
+        learning_rate: float,
+        lr_lambda,
+    ):
+        r"""Pytorch Lightning wrapper of PyTorch model, including forward,
+        optimization of model, etc.
+
+        Args:
+            target_source_type: str, e.g., 'vocals'
+            model: nn.Module
+            loss_function: func
+            learning_rate: float
+            lr_lambda: func
+        """
+        super().__init__()
+        # self.target_source_types = target_source_types
+        self.batch_data_preprocessor = batch_data_preprocessor
+        self.model = model
+        self.loss_function = loss_function
+        self.learning_rate = learning_rate
+        self.lr_lambda = lr_lambda
+
+    def training_step(self, batch_data_dict: Dict, batch_idx: int) -> float:
+        r"""Forward a mini-batch data to model, calculate loss function, and
+        train for one step. A mini-batch data is evenly distributed to multiple
+        devices (if there are) for parallel training.
+
+        Args:
+            batch_data_dict: e.g. {
+                'vocals': (batch_size, channels_num, segment_samples),
+                'accompaniment': (batch_size, channels_num, segment_samples),
+                'mixture': (batch_size, channels_num, segment_samples)
+            }
+            batch_idx: int
+
+        Returns:
+            loss: float, loss function of this mini-batch
+        """
+        input_dict, target_dict = self.batch_data_preprocessor(batch_data_dict)
+        # mixtures: (batch_size, channels_num, segment_samples)
+        # targets: (batch_size, channels_num * target_sources_num, segment_samples)
+
+        # Forward.
+        self.model.train()
+
+        # outputs = self.model(mixtures)['wav']
+        outputs = self.model(input_dict)['wav']
+        # (batch_size, channels_num, segment_samples)
+
+        # Calculate loss.
+        loss = self.loss_function(
+            output=outputs, target=target_dict['target'], mixture=input_dict['waveform']
+        )
+
+        return loss
+
+    def configure_optimizers(self):
+        r"""Configure optimizer."""
+
+        optimizer = optim.Adam(
+            self.model.parameters(),
+            lr=self.learning_rate,
+            betas=(0.9, 0.999),
+            eps=1e-08,
+            weight_decay=0.0,
+            amsgrad=True,
+        )
+
+        scheduler = {
+            'scheduler': LambdaLR(optimizer, self.lr_lambda),
+            'interval': 'step',
+            'frequency': 1,
+        }
+
+        return [optimizer], [scheduler]
 
 
 def get_model_class(model_type):
@@ -255,6 +307,11 @@ def get_model_class(model_type):
         from music_source_separation.models.unet import UNet
 
         return UNet
+
+    elif model_type == 'ConditionalUNet':
+        from music_source_separation.models.conditional_unet import ConditionalUNet
+
+        return ConditionalUNet
 
     else:
         raise NotImplementedError

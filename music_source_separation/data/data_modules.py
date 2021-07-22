@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional
 
 import h5py
 import librosa
@@ -36,10 +36,11 @@ class DataModule(LightningDataModule):
         r"""called on every device."""
 
         # SegmentSampler is used for selecting segments for training.
-        # On multipythole devices, each SegmentSampler samples a part of mini-batch
+        # On multiple devices, each SegmentSampler samples a part of mini-batch
         # data.
         if self.distributed:
             self.train_sampler = DistributedSamplerWrapper(self._train_sampler)
+
         else:
             self.train_sampler = self._train_sampler
 
@@ -52,12 +53,13 @@ class DataModule(LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=True,
         )
+
         return train_loader
 
 
 class Dataset:
     def __init__(self, augmentor, segment_samples: int):
-        r"""Used for returning data according to a meta.
+        r"""Used for getting data according to a meta.
 
         Args:
             augmentor: Augmentor class
@@ -67,7 +69,7 @@ class Dataset:
         self.segment_samples = segment_samples
 
     def __getitem__(self, meta: Dict) -> Dict:
-        r"""Return data according to a meta. E.g., a meta looks like: {
+        r"""Return data according to a meta. E.g., an input meta looks like: {
             'vocals': [['song_A.h5', 6332760, 6465060], ['song_B.h5', 198450, 330750]],
             'accompaniment': [['song_C.h5', 24232920, 24365250], ['song_D.h5', 1569960, 1702260]]}.
         }
@@ -93,16 +95,19 @@ class Dataset:
         data_dict = {}
 
         for source_type in source_types:
+            # E.g., ['vocals', 'bass', ...]
 
             waveforms = []  # Audio segments to be mix-audio augmented.
 
             for m in meta[source_type]:
+                # E.g., ['.../song_A.h5', 3995460, 4127760]
+
                 [hdf5_path, start_sample, end_sample] = m
 
                 with h5py.File(hdf5_path, 'r') as hf:
 
                     waveform = int16_to_float32(
-                        hf[source_type][:, start_sample : end_sample]
+                        hf[source_type][:, start_sample:end_sample]
                     )
 
                     if self.augmentor:
@@ -111,6 +116,7 @@ class Dataset:
                     waveform = librosa.util.fix_length(
                         waveform, size=self.segment_samples, axis=1
                     )
+                    # (channels_num, segments_num)
 
                 waveforms.append(waveform)
             # E.g., waveforms: [(channels_num, audio_samples), (channels_num, audio_samples)]
@@ -157,6 +163,7 @@ def collate_fn(list_data_dict: List[Dict]) -> Dict:
             }
     """
     data_dict = {}
+    
     for key in list_data_dict[0].keys():
         data_dict[key] = torch.Tensor(
             np.array([data_dict[key] for data_dict in list_data_dict])

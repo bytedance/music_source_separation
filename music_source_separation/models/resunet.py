@@ -409,12 +409,12 @@ class ResUNet143_DecouplePlusInplaceABN(nn.Module, Base):
         x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 1024 -> 1025.
         x = x[:, :, 0:origin_len, :]  # (bs, channels * 3, T, F)
 
-        mask_mag1 = torch.sigmoid(x[:, 0:self.channels, :, :])
-        _mask_real = x[:, self.channels:self.channels * 2, :, :]
-        _mask_imag = x[:, self.channels * 2:self.channels * 3, :, :]
+        mask_mag1 = torch.sigmoid(x[:, 0 : self.channels, :, :])
+        _mask_real = x[:, self.channels : self.channels * 2, :, :]
+        _mask_imag = x[:, self.channels * 2 : self.channels * 3, :, :]
         _, mask_cos, mask_sin = magphase(_mask_real, _mask_imag)
 
-        linear_mag = x[:, self.channels * 3:self.channels * 4, :, :]
+        linear_mag = x[:, self.channels * 3 : self.channels * 4, :, :]
 
         # e^{jX + jM}
         out_cos = cos_in * mask_cos - sin_in * mask_sin
@@ -429,9 +429,10 @@ class ResUNet143_DecouplePlusInplaceABN(nn.Module, Base):
 
         wav_out = [
             self.istft(
-                out_real[:, channel : channel + 1, :, :], 
-                out_imag[:, channel : channel + 1, :, :], length
-            ) 
+                out_real[:, channel : channel + 1, :, :],
+                out_imag[:, channel : channel + 1, :, :],
+                length,
+            )
             for channel in range(self.channels)
         ]
         # (batch_size, channels_num, segments_num)

@@ -6,6 +6,15 @@ import torch.nn.functional as F
 from torchlibrosa.stft import magphase
 
 
+def init_embedding(layer):
+    """Initialize a Linear or Convolutional layer."""
+    nn.init.uniform_(layer.weight, -1.0, 1.0)
+
+    if hasattr(layer, 'bias'):
+        if layer.bias is not None:
+            layer.bias.data.fill_(0.0)
+
+
 def init_layer(layer):
     """Initialize a Linear or Convolutional layer."""
     nn.init.xavier_uniform_(layer.weight)
@@ -85,10 +94,10 @@ class Base:
         Outputs:
           output: (batch_size, channels_num, time_steps, freq_bins)
         """
-    
+
         batch_size, channels_num, segment_samples = input.shape
 
-        # Reshape input because the following spectrogram function requires 
+        # Reshape input because the following spectrogram function requires
         # input size of (n, segments_num)
         x = input.reshape(batch_size * channels_num, segment_samples)
 
@@ -119,7 +128,7 @@ class Base:
         output = torch.cat(sp_list, dim=1)
         return output
     '''
-    
+
     '''
     def spectrogram_to_wav(self, input, spectrogram, length=None):
         """Spectrogram to waveform.
@@ -148,12 +157,13 @@ class Base:
         return output
     '''
 
+
 class Subband:
     def __init__(self, subbands_num):
         self.subbands_num = subbands_num
 
     def analysis(self, x):
-        r"""Split time-frequency representation into subbands. Stack the 
+        r"""Split time-frequency representation into subbands. Stack the
         subbands to the channel dimension.
 
         Args:
@@ -164,14 +174,25 @@ class Subband:
         """
         batch_size, channels_num, time_steps, freq_bins = x.shape
 
-        x = x.reshape(batch_size, channels_num, time_steps, self.subbands_num, freq_bins // self.subbands_num)
+        x = x.reshape(
+            batch_size,
+            channels_num,
+            time_steps,
+            self.subbands_num,
+            freq_bins // self.subbands_num,
+        )
         x = x.transpose(2, 3)
-        output = x.reshape(batch_size, channels_num * self.subbands_num, time_steps, freq_bins // self.subbands_num)
+        output = x.reshape(
+            batch_size,
+            channels_num * self.subbands_num,
+            time_steps,
+            freq_bins // self.subbands_num,
+        )
 
         return output
 
     def synthesis(self, x):
-        r"""Synthesis subband time-frequency representations into original 
+        r"""Synthesis subband time-frequency representations into original
         time-frequency representation.
 
         Args:
@@ -186,7 +207,13 @@ class Subband:
         channels_num = subband_channels_num // self.subbands_num
         freq_bins = subband_freq_bins * self.subbands_num
 
-        x = x.reshape(batch_size, channels_num, self.subbands_num, time_steps, freq_bins // self.subbands_num)
+        x = x.reshape(
+            batch_size,
+            channels_num,
+            self.subbands_num,
+            time_steps,
+            freq_bins // self.subbands_num,
+        )
         x = x.transpose(2, 3)
         output = x.reshape(batch_size, channels_num, time_steps, freq_bins)
 
