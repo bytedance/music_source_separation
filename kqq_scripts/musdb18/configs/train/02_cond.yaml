@@ -3,26 +3,30 @@ task_name: musdb18
 train:
     input_source_types:
         - vocals
-        - accompaniment
+        - bass
+        - drums
+        - other
     target_source_types: 
         - vocals
-    indexes_dict: "indexes/musdb18/sr=44100_ch=2/train/full_train/vocals_accompaniment.pkl"
+        - bass
+        - drums
+        - other
+    indexes_dict: "indexes/musdb18/sr=44100_ch=2/train/full_train/vocals_bass_drums_other.pkl"
     sample_rate: 44100
     channels: 2
     segment_seconds: 3.0
-    model_type: UNet
+    model_type: ConditionalUNet
     loss_type: l1_wav
     mini_data: False
     mixaudio:
-        vocals: 2
-        accompaniment: 2
+        vocals: 1
+        bass: 1
+        drums: 1
+        other: 1
     augmentation:
         pitch_shift: 0
-        magnitude_scale:
-            lower_db: 0
-            higher_db: 0
-    batch_data_preprocessor: BasicBatchDataPreprocessor
-    evaluation_callback: Musdb18EvaluationCallback
+    batch_data_preprocessor: ConditionalSisoBatchDataPreprocessor
+    evaluation_callback: Musdb18ConditionalEvaluationCallback
     learning_rate: 1e-3
     batch_size: 16
     precision: 32

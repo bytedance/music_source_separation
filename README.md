@@ -50,7 +50,7 @@ We pack audio waveforms into hdf5 files to speed up training.
 
 ## 4. Train & evaluate & save checkpoints
 ```bash
-./scripts/train_musdb18.sh
+./scripts/musdb18/train.sh
 ```
 
 ## Reference

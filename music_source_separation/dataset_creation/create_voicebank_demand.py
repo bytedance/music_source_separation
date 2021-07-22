@@ -3,7 +3,7 @@ import os
 import pathlib
 import time
 from concurrent.futures import ProcessPoolExecutor
-from typing import List
+from typing import List, NoReturn
 
 import h5py
 import librosa
@@ -12,7 +12,7 @@ import numpy as np
 from music_source_separation.utils import float32_to_int16
 
 
-def pack_audios_to_hdf5s(args) -> None:
+def pack_audios_to_hdf5s(args) -> NoReturn:
     """Pack sources of audio files to hdf5 files. Hdf5 files can speed up
     loading and indexing.
     """
@@ -70,7 +70,7 @@ def pack_audios_to_hdf5s(args) -> None:
     print("Pack hdf5 time: {:.3f} s".format(time.time() - pack_hdf5s_time))
 
 
-def write_single_audio_to_hdf5(param: List) -> None:
+def write_single_audio_to_hdf5(param: List) -> NoReturn:
     r"""Write single audio into hdf5 file."""
 
     (

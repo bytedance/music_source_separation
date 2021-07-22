@@ -32,6 +32,7 @@ class SaveCheckpointsCallback(pl.Callback):
         global_step = trainer.global_step
 
         if global_step % self.save_step_frequency == 0:
+
             checkpoint_path = os.path.join(
                 self.checkpoints_dir, "step={}.pth".format(global_step)
             )

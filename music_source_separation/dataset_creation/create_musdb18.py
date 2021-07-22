@@ -1,3 +1,4 @@
+from typing import NoReturn
 import argparse
 import os
 import time
@@ -14,7 +15,7 @@ from music_source_separation.utils import float32_to_int16
 SOURCE_TYPES = ["vocals", "drums", "bass", "other", "accompaniment"]
 
 
-def pack_audios_to_hdf5s(args) -> None:
+def pack_audios_to_hdf5s(args) -> NoReturn:
     r"""Pack (resampled) audio files into hdf5 files to speed up loading."""
     # arguments & parameters
     dataset_dir = args.dataset_dir
@@ -65,7 +66,7 @@ def pack_audios_to_hdf5s(args) -> None:
     print("Pack hdf5 time: {:.3f} s".format(time.time() - pack_hdf5s_time))
 
 
-def write_single_audio_to_hdf5(param) -> None:
+def write_single_audio_to_hdf5(param) -> NoReturn:
     r"""Write single audio into hdf5 file."""
     (
         dataset_dir,

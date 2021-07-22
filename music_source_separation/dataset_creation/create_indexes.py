@@ -1,3 +1,4 @@
+from typing import NoReturn
 import argparse
 import os
 import pickle
@@ -7,7 +8,7 @@ import h5py
 from music_source_separation.utils import read_yaml
 
 
-def create_indexes(args) -> None:
+def create_indexes(args) -> NoReturn:
     r"""Create and write out training indexes into disk. The indexes may contain
     information from multiple datasets. During training, training indexes will
     be shuffled and iterated for selecting segments to be mixed. E.g., the

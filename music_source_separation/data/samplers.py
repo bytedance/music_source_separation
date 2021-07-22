@@ -1,5 +1,5 @@
 import pickle
-from typing import Dict, List
+from typing import Dict, List, NoReturn
 
 import numpy as np
 import torch.distributed as dist
@@ -9,7 +9,7 @@ class SegmentSampler:
     def __init__(
         self,
         indexes_path: str,
-        segment_samples,
+        segment_samples: int,
         mixaudio_dict: Dict,
         batch_size: int,
         steps_per_epoch: int,
@@ -147,14 +147,14 @@ class SegmentSampler:
 
             yield batch_meta_list
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.steps_per_epoch
 
-    def state_dict(self):
+    def state_dict(self) -> Dict:
         state = {'pointers_dict': self.pointers_dict, 'indexes_dict': self.indexes_dict}
         return state
 
-    def load_state_dict(self, state):
+    def load_state_dict(self, state) -> NoReturn:
         self.pointers_dict = state['pointers_dict']
         self.indexes_dict = state['indexes_dict']
 
@@ -171,5 +171,5 @@ class DistributedSamplerWrapper:
         for indices in self.sampler:
             yield indices[rank::num_replicas]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.sampler)

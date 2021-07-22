@@ -1,5 +1,7 @@
-import torch.nn as nn
+from typing import List
+
 import pytorch_lightning as pl
+import torch.nn as nn
 
 from music_source_separation.callbacks.musdb18_callbacks import get_musdb18_callbacks
 from music_source_separation.callbacks.voicebank_demand_callbacks import (
@@ -10,34 +12,51 @@ from music_source_separation.callbacks.voicebank_demand_callbacks import (
 def get_callbacks(
     task_name: str,
     config_yaml: str,
+    dataset_dir: str,
     workspace: str,
     checkpoints_dir: str,
     statistics_path: str,
     logger: pl.loggers.TensorBoardLogger,
     model: nn.Module,
     evaluate_device: str,
-):
-    r"""Get callbacks of a task and config yaml file."""
+) -> List[pl.Callback]:
+    r"""Get callbacks of a task and config yaml file.
+
+    Args:
+        config_yaml: str
+        dataset_dir: str
+        workspace: str
+        checkpoints_dir: str
+        statistics_dir: str
+        logger: pl.loggers.TensorBoardLogger
+        model: nn.Module
+        evaluate_device: str
+
+    Return:
+        callbacks: List[pl.Callback]
+    """
     if task_name == 'musdb18':
         return get_musdb18_callbacks(
-            config_yaml,
-            workspace,
-            checkpoints_dir,
-            statistics_path,
-            logger,
-            model,
-            evaluate_device,
+            config_yaml=config_yaml,
+            dataset_dir=dataset_dir,
+            workspace=workspace,
+            checkpoints_dir=checkpoints_dir,
+            statistics_path=statistics_path,
+            logger=logger,
+            model=model,
+            evaluate_device=evaluate_device,
         )
 
     elif task_name == 'voicebank-demand':
         return get_voicebank_demand_callbacks(
-            config_yaml,
-            workspace,
-            checkpoints_dir,
-            statistics_path,
-            logger,
-            model,
-            evaluate_device,
+            config_yaml=config_yaml,
+            dataset_dir=dataset_dir,
+            workspace=workspace,
+            checkpoints_dir=checkpoints_dir,
+            statistics_path=statistics_path,
+            logger=logger,
+            model=model,
+            evaluate_device=evaluate_device,
         )
 
     else:

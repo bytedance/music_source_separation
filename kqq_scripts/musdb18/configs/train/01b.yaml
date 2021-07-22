@@ -19,8 +19,8 @@ train:
     augmentation:
         pitch_shift: 0
         magnitude_scale:
-            lower_db: 0
-            higher_db: 0
+            lower_db: -20
+            higher_db: 20
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3

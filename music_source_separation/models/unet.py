@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import List, Tuple, NoReturn, Dict
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,7 +21,15 @@ from music_source_separation.models.pytorch_modules import (
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, activation, momentum):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Tuple,
+        activation: str,
+        momentum: float,
+    ):
+        r"""Convolutional block."""
         super(ConvBlock, self).__init__()
 
         self.activation = activation
@@ -53,22 +61,40 @@ class ConvBlock(nn.Module):
 
         self.init_weights()
 
-    def init_weights(self):
+    def init_weights(self) -> NoReturn:
+        r"""Initialize weights."""
         init_layer(self.conv1)
         init_layer(self.conv2)
         init_bn(self.bn1)
         init_bn(self.bn2)
 
-    def forward(self, x):
-        x = act(self.bn1(self.conv1(x)), self.activation)
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        r"""Forward data into the module.
+
+        Args:
+            input_tensor: (batch_size, in_feature_maps, time_steps, freq_bins)
+
+        Returns:
+            output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
+        """
+        x = act(self.bn1(self.conv1(input_tensor)), self.activation)
         x = act(self.bn2(self.conv2(x)), self.activation)
-        return x
+        output_tensor = x
+
+        return output_tensor
 
 
 class EncoderBlock(nn.Module):
     def __init__(
-        self, in_channels, out_channels, kernel_size, downsample, activation, momentum
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Tuple,
+        downsample: Tuple,
+        activation: str,
+        momentum: float,
     ):
+        r"""Encoder block."""
         super(EncoderBlock, self).__init__()
 
         self.conv_block = ConvBlock(
@@ -76,17 +102,38 @@ class EncoderBlock(nn.Module):
         )
         self.downsample = downsample
 
-    def forward(self, x):
-        encoder = self.conv_block(x)
-        encoder_pool = F.avg_pool2d(encoder, kernel_size=self.downsample)
-        return encoder_pool, encoder
+    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        r"""Forward data into the module.
+
+        Args:
+            input_tensor: (batch_size, in_feature_maps, time_steps, freq_bins)
+
+        Returns:
+            encoder_pool: (batch_size, out_feature_maps, downsampled_time_steps, downsampled_freq_bins)
+            encoder: (batch_size, out_feature_maps, time_steps, freq_bins)
+        """
+        encoder_tensor = self.conv_block(input_tensor)
+        # encoder: (batch_size, out_feature_maps, time_steps, freq_bins)
+
+        encoder_pool = F.avg_pool2d(encoder_tensor, kernel_size=self.downsample)
+        # encoder_pool: (batch_size, out_feature_maps, downsampled_time_steps, downsampled_freq_bins)
+
+        return encoder_pool, encoder_tensor
 
 
 class DecoderBlock(nn.Module):
     def __init__(
-        self, in_channels, out_channels, kernel_size, upsample, activation, momentum
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Tuple,
+        upsample: Tuple,
+        activation: str,
+        momentum: float,
     ):
+        r"""Decoder block."""
         super(DecoderBlock, self).__init__()
+
         self.kernel_size = kernel_size
         self.stride = upsample
         self.activation = activation
@@ -110,18 +157,37 @@ class DecoderBlock(nn.Module):
         self.init_weights()
 
     def init_weights(self):
+        r"""Initialize weights."""
         init_layer(self.conv1)
         init_bn(self.bn1)
 
-    def forward(self, input_tensor, concat_tensor):
+    def forward(
+        self, input_tensor: torch.Tensor, concat_tensor: torch.Tensor
+    ) -> torch.Tensor:
+        r"""Forward data into the module.
+
+        Args:
+            torch_tensor: (batch_size, in_feature_maps, downsampled_time_steps, downsampled_freq_bins)
+            concat_tensor: (batch_size, in_feature_maps, time_steps, freq_bins)
+
+        Returns:
+            output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
+        """
         x = act(self.bn1(self.conv1(input_tensor)), self.activation)
+        # (batch_size, in_feature_maps, time_steps, freq_bins)
+
         x = torch.cat((x, concat_tensor), dim=1)
-        x = self.conv_block2(x)
-        return x
+        # (batch_size, in_feature_maps * 2, time_steps, freq_bins)
+
+        output_tensor = self.conv_block2(x)
+        # output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
+
+        return output_tensor
 
 
 class UNet(nn.Module, Base):
-    def __init__(self, input_channels, target_sources_num):
+    def __init__(self, input_channels: int, target_sources_num: int):
+        r"""UNet."""
         super(UNet, self).__init__()
 
         self.input_channels = input_channels
@@ -291,14 +357,32 @@ class UNet(nn.Module, Base):
         self.init_weights()
 
     def init_weights(self):
+        r"""Initialize weights."""
         init_bn(self.bn0)
         init_layer(self.after_conv2)
 
-    def feature_maps_to_wav(self, x, sp, sin_in, cos_in, audio_length):
+    def feature_maps_to_wav(
+        self,
+        input_tensor: torch.Tensor,
+        sp: torch.Tensor,
+        sin_in: torch.Tensor,
+        cos_in: torch.Tensor,
+        audio_length: int,
+    ) -> torch.Tensor:
+        r"""Convert feature maps to waveform.
 
-        batch_size, _, time_steps, freq_bins = x.shape
+        Args:
+            input_tensor: (batch_size, feature_maps, time_steps, freq_bins)
+            sp: (batch_size, feature_maps, time_steps, freq_bins)
+            sin_in: (batch_size, feature_maps, time_steps, freq_bins)
+            cos_in: (batch_size, feature_maps, time_steps, freq_bins)
 
-        x = x.reshape(
+        Outputs:
+            waveform: (batch_size, target_sources_num * input_channels, segment_samples)
+        """
+        batch_size, _, time_steps, freq_bins = input_tensor.shape
+
+        x = input_tensor.reshape(
             batch_size,
             self.target_sources_num,
             self.input_channels,
@@ -323,7 +407,8 @@ class UNet(nn.Module, Base):
         out_sin = (
             sin_in[:, None, :, :, :] * mask_cos + cos_in[:, None, :, :, :] * mask_sin
         )
-        # out_cos, out_sin: (batch_size, target_sources_num, input_channles, time_steps, freq_bins)
+        # out_cos: (batch_size, target_sources_num, input_channles, time_steps, freq_bins)
+        # out_sin: (batch_size, target_sources_num, input_channles, time_steps, freq_bins)
 
         # Calculate |Y|.
         out_mag = F.relu_(sp[:, None, :, :, :] * mask_mag)
@@ -345,38 +430,43 @@ class UNet(nn.Module, Base):
         out_imag = out_imag.reshape(shape)
 
         # ISTFT.
-        wav_out = self.istft(out_real, out_imag, audio_length)
+        x = self.istft(out_real, out_imag, audio_length)
         # (batch_size * target_sources_num * input_channels, segments_num)
 
         # Reshape.
-        wav_out = wav_out.reshape(
+        waveform = x.reshape(
             batch_size, self.target_sources_num * self.input_channels, audio_length
         )
         # (batch_size, target_sources_num * input_channels, segments_num)
 
-        return wav_out
+        return waveform
 
-    def forward(self, input_dict):
-        """
+    def forward(self, input_dict: Dict) -> Dict:
+        """Forward data into the module.
+
         Args:
-          input: (batch_size, segment_samples, channels_num)
+            input_dict: dict, e.g., {
+                waveform: (batch_size, input_channels, segment_samples),
+                ...,
+            }
 
         Outputs:
-          output_dict: {
-            'wav': (batch_size, segment_samples, channels_num),
-            'sp': (batch_size, channels_num, time_steps, freq_bins)}
+            output_dict: dict, e.g., {
+                'waveform': (batch_size, input_channels, segment_samples),
+                ...,
+            }
         """
-
         mixtures = input_dict['waveform']
+        # (batch_size, input_channels, segment_samples)
 
-        sp, cos_in, sin_in = self.wav_to_spectrogram_phase(mixtures)
-        """(batch_size, channels_num, time_steps, freq_bins)"""
+        mag, cos_in, sin_in = self.wav_to_spectrogram_phase(mixtures)
+        # mag, cos_in, sin_in: (batch_size, input_channels, time_steps, freq_bins)
 
-        # Batch normalization
-        x = sp.transpose(1, 3)
+        # Batch normalize on individual frequency bins.
+        x = mag.transpose(1, 3)
         x = self.bn0(x)
         x = x.transpose(1, 3)
-        """(batch_size, chanenls, time_steps, freq_bins)"""
+        """(batch_size, input_channels, time_steps, freq_bins)"""
 
         # Pad spectrogram to be evenly divided by downsample ratio.
         origin_len = x.shape[2]
@@ -385,49 +475,53 @@ class UNet(nn.Module, Base):
             - origin_len
         )
         x = F.pad(x, pad=(0, 0, 0, pad_len))
-        """(batch_size, channels, padded_time_steps, freq_bins)"""
+        """(batch_size, input_channels, padded_time_steps, freq_bins)"""
 
-        # Let frequency bins be evenly divided by 2, e.g., 513 -> 512
-        x = x[..., 0 : x.shape[-1] - 1]  # (bs, channels, T, F)
+        # Let frequency bins be evenly divided by 2, e.g., 1025 -> 1024
+        x = x[..., 0 : x.shape[-1] - 1]  # (bs, input_channels, T, F)
 
         x = self.subband.analysis(x)
+        # (bs, input_channels, T, F'), where F' = F // subbands_num
 
         # UNet
-        (x1_pool, x1) = self.encoder_block1(x)  # x1_pool: (bs, 32, T / 2, F / 2)
-        (x2_pool, x2) = self.encoder_block2(x1_pool)  # x2_pool: (bs, 64, T / 4, F / 4)
-        (x3_pool, x3) = self.encoder_block3(x2_pool)  # x3_pool: (bs, 128, T / 8, F / 8)
+        (x1_pool, x1) = self.encoder_block1(x)  # x1_pool: (bs, 32, T / 2, F' / 2)
+        (x2_pool, x2) = self.encoder_block2(x1_pool)  # x2_pool: (bs, 64, T / 4, F' / 4)
+        (x3_pool, x3) = self.encoder_block3(
+            x2_pool
+        )  # x3_pool: (bs, 128, T / 8, F' / 8)
         (x4_pool, x4) = self.encoder_block4(
             x3_pool
-        )  # x4_pool: (bs, 256, T / 16, F / 16)
+        )  # x4_pool: (bs, 256, T / 16, F' / 16)
         (x5_pool, x5) = self.encoder_block5(
             x4_pool
-        )  # x5_pool: (bs, 512, T / 32, F / 32)
+        )  # x5_pool: (bs, 384, T / 32, F' / 32)
         (x6_pool, x6) = self.encoder_block6(
             x5_pool
-        )  # x6_pool: (bs, 1024, T / 64, F / 64)
-        x_center = self.conv_block7(x6_pool)  # (bs, 2048, T / 64, F / 64)
-        x7 = self.decoder_block1(x_center, x6)  # (bs, 1024, T / 32, F / 32)
-        x8 = self.decoder_block2(x7, x5)  # (bs, 512, T / 16, F / 16)
-        x9 = self.decoder_block3(x8, x4)  # (bs, 256, T / 8, F / 8)
-        x10 = self.decoder_block4(x9, x3)  # (bs, 128, T / 4, F / 4)
-        x11 = self.decoder_block5(x10, x2)  # (bs, 64, T / 2, F / 2)
-        x12 = self.decoder_block6(x11, x1)  # (bs, 32, T, F)
-        x = self.after_conv_block1(x12)  # (bs, 32, T, F)
+        )  # x6_pool: (bs, 384, T / 64, F' / 64)
+        x_center = self.conv_block7(x6_pool)  # (bs, 384, T / 64, F' / 64)
+        x7 = self.decoder_block1(x_center, x6)  # (bs, 384, T / 32, F' / 32)
+        x8 = self.decoder_block2(x7, x5)  # (bs, 384, T / 16, F' / 16)
+        x9 = self.decoder_block3(x8, x4)  # (bs, 256, T / 8, F' / 8)
+        x10 = self.decoder_block4(x9, x3)  # (bs, 128, T / 4, F' / 4)
+        x11 = self.decoder_block5(x10, x2)  # (bs, 64, T / 2, F' / 2)
+        x12 = self.decoder_block6(x11, x1)  # (bs, 32, T, F')
+        x = self.after_conv_block1(x12)  # (bs, 32, T, F')
+
         x = self.after_conv2(x)
-        # (batch_size, input_channles * subbands_num * targets_num * k, T, F // subbands_num)
+        # (batch_size, input_channles * subbands_num * targets_num * k, T, F')
 
         x = self.subband.synthesis(x)
         # (batch_size, input_channles * targets_num * K, T, F)
 
         # Recover shape
         x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 1024 -> 1025.
-        x = x[:, :, 0:origin_len, :]  # (bs, feature_maps, T, F)
+        x = x[:, :, 0:origin_len, :]  # (bs, feature_maps, time_steps, freq_bins)
 
         audio_length = mixtures.shape[2]
 
-        separated_audio = self.feature_maps_to_wav(x, sp, sin_in, cos_in, audio_length)
+        separated_audio = self.feature_maps_to_wav(x, mag, sin_in, cos_in, audio_length)
         # separated_audio: (batch_size, target_sources_num * input_channels, segments_num)
 
-        output_dict = {'wav': separated_audio}
+        output_dict = {'waveform': separated_audio}
 
         return output_dict

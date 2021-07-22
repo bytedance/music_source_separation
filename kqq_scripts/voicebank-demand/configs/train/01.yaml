@@ -1,28 +1,23 @@
 ---
-task_name: musdb18
+task_name: voicebank-demand
 train:
     input_source_types:
-        - vocals
-        - accompaniment
+        - speech
+        - noise
     target_source_types: 
-        - vocals
-    indexes_dict: "indexes/musdb18/sr=44100_ch=2/train/full_train/vocals_accompaniment.pkl"
+        - speech
+    indexes_dict: "indexes/voicebank-demand/sr=44100_ch=1/train/speech_noise.pkl"
     sample_rate: 44100
-    channels: 2
+    channels: 1
     segment_seconds: 3.0
     model_type: UNet
     loss_type: l1_wav
     mini_data: False
     mixaudio:
-        vocals: 2
-        accompaniment: 2
+        speech: 1
+        noise: 1
     augmentation:
         pitch_shift: 0
-        magnitude_scale:
-            lower_db: 0
-            higher_db: 0
-    batch_data_preprocessor: BasicBatchDataPreprocessor
-    evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
     batch_size: 16
     precision: 32
@@ -36,7 +31,8 @@ train:
     resume_checkpoint: ""
 
 evaluate:
-    train: "hdf5s/musdb18/sr=44100_ch=2/train/full_train"
-    test: "hdf5s/musdb18/sr=44100_ch=2/test"
-    segment_seconds: 30.0
+    segment_seconds: 3.0
+    test:
+        clean_dir: "clean_testset_wav"
+        noisy_dir: "noisy_testset_wav"
     batch_size: 1

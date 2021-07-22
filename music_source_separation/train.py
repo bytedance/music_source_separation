@@ -160,6 +160,7 @@ def train(args) -> None:
     r"""Train & evaluate and save checkpoints."""
 
     # arugments & parameters
+    dataset_dir = args.dataset_dir
     workspace = args.workspace
     gpus = args.gpus
     config_yaml = args.config_yaml
@@ -218,6 +219,7 @@ def train(args) -> None:
     callbacks = get_callbacks(
         task_name=task_name,
         config_yaml=config_yaml,
+        dataset_dir=dataset_dir,
         workspace=workspace,
         checkpoints_dir=checkpoints_dir,
         statistics_path=statistics_path,
@@ -225,7 +227,7 @@ def train(args) -> None:
         model=model,
         evaluate_device=evaluate_device,
     )
-    # callbacks = []
+    callbacks = []
 
     # learning rate reduce function
     lr_lambda = partial(
@@ -265,6 +267,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest="mode")
 
     parser_train = subparsers.add_parser("train")
+    parser_train.add_argument("--dataset_dir", type=str, required=True)
     parser_train.add_argument("--workspace", type=str, required=True)
     parser_train.add_argument("--gpus", type=int, required=True)
     parser_train.add_argument("--config_yaml", type=str, required=True)

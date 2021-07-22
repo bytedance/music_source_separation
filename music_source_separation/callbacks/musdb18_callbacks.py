@@ -1,35 +1,51 @@
-import pathlib
-import numpy as np
-import museval
-import time
 import logging
 import os
+import pathlib
+import time
+from typing import List
+
 import h5py
-import torch.nn as nn
+import museval
+import numpy as np
 import pytorch_lightning as pl
+import torch.nn as nn
 from pytorch_lightning.utilities import rank_zero_only
 
 from music_source_separation.callbacks.base_callbacks import SaveCheckpointsCallback
+from music_source_separation.inference import Separator
 from music_source_separation.utils import (
-    read_yaml,
     StatisticsContainer,
     int16_to_float32,
+    read_yaml,
 )
-from music_source_separation.inference import Separator
 
 
 def get_musdb18_callbacks(
     config_yaml: str,
+    dataset_dir: str,
     workspace: str,
     checkpoints_dir: str,
     statistics_path: str,
     logger: pl.loggers.TensorBoardLogger,
     model: nn.Module,
     evaluate_device: str,
-):
+) -> List[pl.Callback]:
+    """Get MUSDB18 callbacks of a config yaml.
 
+    Args:
+        config_yaml: str
+        dataset_dir: str
+        workspace: str
+        checkpoints_dir: str
+        statistics_dir: str
+        logger: pl.loggers.TensorBoardLogger
+        model: nn.Module
+        evaluate_device: str
+
+    Return:
+        callbacks: List[pl.Callback]
+    """
     configs = read_yaml(config_yaml)
-    # target_source_type = configs['train']['target_source_types'][0]
     evaluation_callback = configs['train']['evaluation_callback']
     target_source_types = configs['train']['target_source_types']
     input_channels = configs['train']['channels']
@@ -49,10 +65,11 @@ def get_musdb18_callbacks(
         save_step_frequency=save_step_frequency,
     )
 
+    # evaluation callback
+    EvaluationCallback = _get_evaluation_callback_class(evaluation_callback)
+
     # statistics container
     statistics_container = StatisticsContainer(statistics_path)
-
-    EvaluationCallback = _get_evaluation_callback_class(evaluation_callback)
 
     # evaluation callback
     evaluate_test_callback = EvaluationCallback(
@@ -74,8 +91,8 @@ def get_musdb18_callbacks(
     return callbacks
 
 
-def _get_evaluation_callback_class(evaluation_callback):
-
+def _get_evaluation_callback_class(evaluation_callback) -> pl.Callback:
+    r"""Get evaluation callback class."""
     if evaluation_callback == "Musdb18EvaluationCallback":
         return Musdb18EvaluationCallback
 
@@ -105,7 +122,8 @@ class Musdb18EvaluationCallback(pl.Callback):
 
         Args:
             model: nn.Module
-            target_source_type: str, e.g., 'vocals'
+            target_source_types: List[str], e.g., ['vocals', 'bass', ...]
+            input_channels: int
             hdf5s_dir, str, directory containing hdf5 files for evaluation.
             split: 'train' | 'test'
             segment_samples: int, length of segments to be input to a model, e.g., 44100*30
@@ -133,7 +151,6 @@ class Musdb18EvaluationCallback(pl.Callback):
     @rank_zero_only
     def on_batch_end(self, trainer: pl.Trainer, _) -> None:
         r"""Evaluate separation SDRs of audio recordings."""
-
         global_step = trainer.global_step
 
         if global_step % self.evaluate_step_frequency == 0:
@@ -156,6 +173,7 @@ class Musdb18EvaluationCallback(pl.Callback):
                 with h5py.File(hdf5_path, "r") as hf:
 
                     mixture = int16_to_float32(hf["mixture"][:])
+                    # mixture: (channels_num, audio_samples)
 
                     for j, source_type in enumerate(self.target_source_types):
                         target_dict[source_type] = int16_to_float32(hf[source_type][:])
@@ -163,13 +181,20 @@ class Musdb18EvaluationCallback(pl.Callback):
                 input_dict = {'waveform': mixture}
 
                 sep_wavs = self.separator.separate(input_dict)
+                # sep_wavs: (target_sources_num * channels_num, audio_samples)
 
-                sep_wav_dict = add(
+                sep_wav_dict = get_separated_wavs_from_simo_output(
                     sep_wavs, self.input_channels, self.target_source_types
                 )
+                # output_dict: dict, e.g., {
+                #     'vocals': (channels_num, audio_samples),
+                #     'bass': (channels_num, audio_samples),
+                #     ...,
+                # }
 
                 for source_type in self.target_source_types:
                     # Calculate SDR using museval, input shape should be: (nsrc, nsampl, nchan)
+
                     (sdrs, _, _, _) = museval.evaluate(
                         [target_dict[source_type].T], [sep_wav_dict[source_type].T]
                     )
@@ -185,12 +210,14 @@ class Musdb18EvaluationCallback(pl.Callback):
             median_sdr_dict = {}
 
             for source_type in self.target_source_types:
+
                 median_sdr = np.median(
                     [
                         sdr_dict[audio_name][source_type]
                         for audio_name in sdr_dict.keys()
                     ]
                 )
+
                 median_sdr_dict[source_type] = median_sdr
 
                 logging.info(
@@ -206,8 +233,22 @@ class Musdb18EvaluationCallback(pl.Callback):
             self.statistics_container.dump()
 
 
-def add(x, input_channels, target_source_types):
+def get_separated_wavs_from_simo_output(x, input_channels, target_source_types):
+    r"""Get separated waveforms of target sources from a single input multiple
+    output (SIMO) system.
 
+    Args:
+        x: (target_sources_num * channels_num, audio_samples)
+        input_channels: int
+        target_source_types: List[str], e.g., ['vocals', 'bass', ...]
+
+    Returns:
+        output_dict: dict, e.g., {
+            'vocals': (channels_num, audio_samples),
+            'bass': (channels_num, audio_samples),
+            ...,
+        }
+    """
     output_dict = {}
 
     for j, source_type in enumerate(target_source_types):
@@ -235,7 +276,8 @@ class Musdb18ConditionalEvaluationCallback(pl.Callback):
 
         Args:
             model: nn.Module
-            target_source_type: str, e.g., 'vocals'
+            target_source_types: str, e.g., ['vocals', 'bass', ...]
+            input_channels: int
             hdf5s_dir, str, directory containing hdf5 files for evaluation.
             split: 'train' | 'test'
             segment_samples: int, length of segments to be input to a model, e.g., 44100*30
@@ -286,8 +328,11 @@ class Musdb18ConditionalEvaluationCallback(pl.Callback):
                 with h5py.File(hdf5_path, "r") as hf:
 
                     mixture = int16_to_float32(hf["mixture"][:])
+                    # mixture: (channels_num, audio_samples)
 
                     for j, source_type in enumerate(self.target_source_types):
+                        # E.g., ['vocals', 'bass', ...]
+
                         target_dict[source_type] = int16_to_float32(hf[source_type][:])
 
                         condition = np.zeros(len(self.target_source_types))
@@ -295,6 +340,7 @@ class Musdb18ConditionalEvaluationCallback(pl.Callback):
                         input_dict = {'waveform': mixture, 'condition': condition}
 
                         sep_wav = self.separator.separate(input_dict)
+                        # sep_wav: (channels_num, audio_samples)
 
                         # Calculate SDR using museval, input shape should be: (nsrc, nsampl, nchan)
                         (sdrs, _, _, _) = museval.evaluate(

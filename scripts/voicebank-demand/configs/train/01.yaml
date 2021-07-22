@@ -18,6 +18,11 @@ train:
         noise: 1
     augmentation:
         pitch_shift: 0
+        magnitude_scale:
+            lower_db: 0
+            higher_db: 0
+    batch_data_preprocessor: BasicBatchDataPreprocessor
+    evaluation_callback: VoicebankDemandEvaluationCallback
     learning_rate: 1e-3
     batch_size: 16
     precision: 32
@@ -31,8 +36,8 @@ train:
     resume_checkpoint: ""
 
 evaluate:
+    batch_size: 1
     segment_seconds: 3.0
     test:
         clean_dir: "clean_testset_wav"
         noisy_dir: "noisy_testset_wav"
-    batch_size: 1

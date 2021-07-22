@@ -1,6 +1,5 @@
 #!/bin/bash
-DATASET_DIR=${1:-"./datasets/voicebank-demand"}  # The first argument is dataset directory.
-WORKSPACE=${2:-"./workspaces/music_source_separation"}  # The second argument is workspace directory.
+WORKSPACE=${1:-"./workspaces/music_source_separation"}  # Default workspace directory
 
 echo "WORKSPACE=${WORKSPACE}"
 
@@ -9,7 +8,6 @@ TRAIN_CONFIG_YAML="scripts/voicebank-demand/configs/train/resnet143_decouple_plu
 
 # Train & evaluate & save checkpoints.
 CUDA_VISIBLE_DEVICES=0,1 python3 music_source_separation/train.py train \
-	--dataset_dir=$DATASET_DIR \
     --workspace=$WORKSPACE \
     --gpus=2 \
     --config_yaml=$TRAIN_CONFIG_YAML

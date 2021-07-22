@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, NoReturn
 
 import h5py
 import librosa
@@ -32,7 +32,7 @@ class DataModule(LightningDataModule):
         self.num_workers = num_workers
         self.distributed = distributed
 
-    def setup(self, stage: Optional[str] = None):
+    def setup(self, stage: Optional[str] = None) -> NoReturn:
         r"""called on every device."""
 
         # SegmentSampler is used for selecting segments for training.
@@ -163,7 +163,7 @@ def collate_fn(list_data_dict: List[Dict]) -> Dict:
             }
     """
     data_dict = {}
-    
+
     for key in list_data_dict[0].keys():
         data_dict[key] = torch.Tensor(
             np.array([data_dict[key] for data_dict in list_data_dict])
