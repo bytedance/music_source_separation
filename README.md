@@ -61,3 +61,12 @@ We pack audio waveforms into hdf5 files to speed up training.
 ## Reference
 
 [1] Qiuqiang Kong, Yin Cao, Haohe Liu, Keunwoo Choi, Yuxuan Wang, Decoupling Magnitude and Phase Estimation with Deep ResUet for Music Source Separation, International Society for Music Information Retrieval (ISMIR), 2021.
+```
+@inproceedings{kong2021decoupling,
+  title={Decoupling Magnitude and Phase Estimation with Deep ResUet for Music Source Separation.},
+  author={Kong, Qiuqiang and Cao, Yin and Liu, Haohe and Choi, Keunwoo and Wang, Yuxuan },
+  booktitle={ISMIR},
+  year={2021},
+  organization={Citeseer}
+}
+```
