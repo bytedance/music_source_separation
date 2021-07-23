@@ -53,6 +53,11 @@ We pack audio waveforms into hdf5 files to speed up training.
 ./scripts/musdb18/train.sh
 ```
 
+## 5. Inference
+```bash
+./scripts/musdb18/inference.sh
+```
+
 ## Reference
 
 [1] Qiuqiang Kong, Yin Cao, Haohe Liu, Keunwoo Choi, Yuxuan Wang, Decoupling Magnitude and Phase Estimation with Deep ResUet for Music Source Separation, International Society for Music Information Retrieval (ISMIR), 2021.

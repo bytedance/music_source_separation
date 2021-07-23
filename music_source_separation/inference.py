@@ -1,12 +1,16 @@
 from typing import Dict
 import argparse
 import time
+import os
 
 import numpy as np
 import torch
 import torch.nn as nn
 import librosa
 import soundfile
+
+from music_source_separation.models.lightning_modules import get_model_class
+from music_source_separation.utils import read_yaml
 
 
 class Separator:
@@ -21,13 +25,12 @@ class Separator:
             batch_size, int, e.g., 12
             device: str, e.g., 'cuda'
         """
-
         self.model = model
         self.segment_samples = segment_samples
         self.batch_size = batch_size
         self.device = device
 
-    def separate(self, input_dict: Dict):
+    def separate(self, input_dict: Dict) -> np.array:
         r"""Separate an audio clip into a target source.
 
         Args:
@@ -37,7 +40,7 @@ class Separator:
             }
 
         Returns:
-            sep_audio: (channels_num, audio_samples), separated audio
+            sep_audio: (channels_num, audio_samples) | (target_sources_num, channels_num, audio_samples)
         """
         audio = input_dict['waveform']
 
@@ -62,7 +65,7 @@ class Separator:
         # Separate in mini-batches.
         sep_segments = self._forward_in_mini_batches(
             self.model, segments_input_dict, self.batch_size
-        )['wav']
+        )['waveform']
         # (segments_num, channels_num, segment_samples)
 
         # Deframe segments into long audio.
@@ -74,7 +77,7 @@ class Separator:
 
         return sep_audio
 
-    def pad_audio(self, audio):
+    def pad_audio(self, audio: np.array) -> np.array:
         r"""Pad the audio with zero in the end so that the length of audio can
         be evenly divided by segment_samples.
 
@@ -98,7 +101,7 @@ class Separator:
 
         return padded_audio
 
-    def enframe(self, audio, segment_samples):
+    def enframe(self, audio: np.array, segment_samples: int) -> np.array:
         r"""Enframe long audio into segments.
 
         Args:
@@ -123,7 +126,7 @@ class Separator:
 
         return segments
 
-    def deframe(self, segments):
+    def deframe(self, segments: np.array) -> np.array:
         r"""Deframe segments into long audio.
 
         Args:
@@ -132,7 +135,6 @@ class Separator:
         Returns:
             output: (channels_num, audio_samples)
         """
-
         (segments_num, _, segment_samples) = segments.shape
 
         if segments_num == 1:
@@ -158,13 +160,13 @@ class Separator:
 
         return output
 
-    def _is_integer(self, x):
+    def _is_integer(self, x: float) -> bool:
         if x - int(x) < 1e-10:
             return True
         else:
             return False
 
-    def _forward_in_mini_batches(self, model, segments_input_dict, batch_size):
+    def _forward_in_mini_batches(self, model: nn.Module, segments_input_dict: Dict, batch_size: int) -> Dict:
         r"""Forward data to model in mini-batch.
 
         Args:
@@ -222,38 +224,64 @@ class Separator:
 def inference(args):
 
     # Arguments & parameters
+    config_yaml = args.config_yaml
+    checkpoint_path = args.checkpoint_path
     audio_path = args.audio_path
     output_path = args.output_path
     select = args.select
-    sample_rate = 44100
+
+    configs = read_yaml(config_yaml)
+    sample_rate = configs['train']['sample_rate']
+    input_channels = configs['train']['channels']
+    target_source_types = configs['train']['target_source_types']
+    target_sources_num = len(target_source_types)
+    model_type = configs['train']['model_type']
+
     segment_samples = int(30 * sample_rate)
     batch_size = 1
     device = "cuda"
 
-    # Todo
+    # paths
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    # checkpoint = torch.load(checkpoint_path, map_location='cpu')
-    # model.load_state_dict(checkpoint["model"])
+    # Get model class.
+    Model = get_model_class(model_type)
 
-    # model.to(device)
+    # Create model.
+    model = Model(input_channels=input_channels, target_sources_num=target_sources_num)
 
-    # separator = Separator(model, segment_samples, batch_size, device)
+    # Load checkpoint.
+    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    model.load_state_dict(checkpoint["model"])
 
-    # audio, _ = librosa.load(audio_path, sr=sample_rate, mono=False)
+    # Move model to device.
+    model.to(device)
 
-    # separate_time = time.time()
-    # sep_wav = separator.separate(audio)
-    # res_wav = audio - sep_wav
-    # print('Separate time: {:.3f} s'.format(time.time() - separate_time))
+    # Create separator.
+    separator = Separator(model=model, segment_samples=segment_samples, batch_size=batch_size, device=device)
 
-    # # # Write out separated audio
-    # soundfile.write(file=output_path, data=sep_wav.T, samplerate=sample_rate)
-    # soundfile.write(file='_zz2.wav', data=res_wav.T, samplerate=sample_rate)
+    # Load audio.
+    audio, _ = librosa.load(audio_path, sr=sample_rate, mono=False)
+    input_dict = {'waveform': audio}
+
+    # Separate
+    separate_time = time.time()
+
+    sep_wav = separator.separate(input_dict)
+    # (channels_num, audio_samples)
+
+    print('Separate time: {:.3f} s'.format(time.time() - separate_time))
+
+    # Write out separated audio.
+    soundfile.write(file='_zz.wav', data=sep_wav.T, samplerate=sample_rate)
+    os.system("ffmpeg -y -loglevel panic -i _zz.wav {}".format(output_path))
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="")
+    parser.add_argument("--config_yaml", type=str, required=True)
+    parser.add_argument("--checkpoint_path", type=str, required=True)
     parser.add_argument("--audio_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
     parser.add_argument("--select", type=str, required=True)
