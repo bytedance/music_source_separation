@@ -108,6 +108,12 @@ def get_model_class(model_type):
         )
         return ResUNet143_DecouplePlusInplaceABN_ISMIR2021
 
+    elif model_type == 'ResUNet143_DecouplePlusInplaceABNa2':
+        from music_source_separation.models.resunet_ismir2021b import (
+            ResUNet143_DecouplePlusInplaceABNa2,
+        )
+        return ResUNet143_DecouplePlusInplaceABNa2
+
     elif model_type == 'UNet':
         from music_source_separation.models.unet import UNet
         return UNet
