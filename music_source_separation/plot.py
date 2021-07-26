@@ -24,7 +24,7 @@ def plot_statistics(args):
 
     def load_sdrs_multi(config, gpus, filename='train'):
 
-        stat_path = '/home/tiger/workspaces/byte_separation/statistics/{}/config={},gpus={}/statistics.pkl'.format(filename, config, gpus)
+        stat_path = './workspaces/music_source_separation/statistics/musdb18/{}/config={},gpus={}/statistics.pkl'.format(filename, config, gpus)
 
         stat_dict = pickle.load(open(stat_path, 'rb'))
 
@@ -46,6 +46,26 @@ def plot_statistics(args):
     if select == '1a':
         sdrs = load_sdrs(config='01', gpus=2)
         line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+    elif select == '2a':
+        sdrs = load_sdrs(config='resnet143_vocals_ismir2021', gpus=2)
+        line, = ax.plot(sdrs, label='resnet143_vocals_ismir2021,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+        sdrs = load_sdrs(config='resnet143_decouple_plus_vocals', gpus=2)
+        line, = ax.plot(sdrs, label='resnet143_decouple_plus_vocals,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+    elif select == '2b':
+        vocal_sdrs, bass_sdrs, drums_sdrs, other_sdrs = load_sdrs_multi(config='resnet143_decouple_plus_4outputs', gpus=2)
+        line, = ax.plot(vocal_sdrs, label='vocals,resnet143_decouple_plus_4outputs,l1_wav', linewidth=linewidth)
+        lines.append(line)
+        line, = ax.plot(bass_sdrs, label='bass,resnet143_decouple_plus_4outputs,l1_wav', linewidth=linewidth)
+        lines.append(line)
+        line, = ax.plot(drums_sdrs, label='drums,resnet143_decouple_plus_4outputs,l1_wav', linewidth=linewidth)
+        lines.append(line)
+        line, = ax.plot(other_sdrs, label='other,resnet143_decouple_plus_4outputs,l1_wav', linewidth=linewidth)
         lines.append(line)
 
     else:

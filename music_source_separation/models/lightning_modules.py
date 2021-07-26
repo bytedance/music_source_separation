@@ -102,21 +102,22 @@ def get_model_class(model_type):
     Returns:
         nn.Module
     """
-    if model_type == 'ResUNet143_DecouplePlusInplaceABN':
-        from music_source_separation.models.resunet import (
-            ResUNet143_DecouplePlusInplaceABN,
+    if model_type == 'ResUNet143_DecouplePlusInplaceABN_ISMIR2021':
+        from music_source_separation.models.resunet_ismir2021 import (
+            ResUNet143_DecouplePlusInplaceABN_ISMIR2021,
         )
-
-        return ResUNet143_DecouplePlusInplaceABN
+        return ResUNet143_DecouplePlusInplaceABN_ISMIR2021
 
     elif model_type == 'UNet':
         from music_source_separation.models.unet import UNet
-
         return UNet
+
+    elif model_type == 'ResUNet143_DecouplePlus':
+        from music_source_separation.models.resunet import ResUNet143_DecouplePlus
+        return ResUNet143_DecouplePlus
 
     elif model_type == 'ConditionalUNet':
         from music_source_separation.models.conditional_unet import ConditionalUNet
-
         return ConditionalUNet
 
     else:

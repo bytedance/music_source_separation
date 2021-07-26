@@ -3,26 +3,19 @@ task_name: musdb18
 train:
     input_source_types:
         - vocals
-        - bass
-        - drums
-        - other
+        - accompaniment
     target_source_types: 
         - vocals
-        - bass
-        - drums
-        - other
-    indexes_dict: "indexes/musdb18/sr=44100_ch=2/train/full_train/vocals_bass_drums_other.pkl"
+    indexes_dict: "indexes/musdb18/sr=44100_ch=2/train/full_train/vocals_accompaniment.pkl"
     sample_rate: 44100
     channels: 2
     segment_seconds: 3.0
-    model_type: UNet
+    model_type: ResUNet143_DecouplePlusInplaceABN_ISMIR2021
     loss_type: l1_wav
     mini_data: False
     mixaudio:
-        vocals: 1
-        bass: 1
-        drums: 1
-        other: 1
+        vocals: 2
+        accompaniment: 2
     augmentation:
         pitch_shift: 0
         magnitude_scale:

@@ -1,6 +1,6 @@
 ---
+task_name: musdb18
 train:
-    task: musdb18
     input_source_types:
         - vocals
         - accompaniment
@@ -10,12 +10,19 @@ train:
     sample_rate: 44100
     channels: 2
     segment_seconds: 3.0
-    model_type: ResUNet143_DecouplePlusInplaceABN
+    model_type: ResUNet143_DecouplePlus
     loss_type: l1_wav
+    mini_data: False
+    mixaudio:
+        vocals: 2
+        accompaniment: 2
     augmentation:
-        mixaudio:
-            vocals: 2
-            accompaniment: 2
+        pitch_shift: 0
+        magnitude_scale:
+            lower_db: 0
+            higher_db: 0
+    batch_data_preprocessor: BasicBatchDataPreprocessor
+    evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
     batch_size: 16
     precision: 32
