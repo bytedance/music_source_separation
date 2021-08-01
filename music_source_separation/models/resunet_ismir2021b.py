@@ -348,9 +348,4 @@ class ResUNet143_DecouplePlusInplaceABNa2(nn.Module, Base):
 
         output_dict = {'waveform': wav_out}
 
-        # if self.training:
-        #     output_dict = {'wav': wav_out}
-        # else:
-        #     output_dict = {'wav': wav_out, 'mask_cos': mask_cos, 'mask_sin': mask_sin, 'mask_mag': out_mag / sp}
-
         return output_dict

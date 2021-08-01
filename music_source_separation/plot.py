@@ -68,6 +68,11 @@ def plot_statistics(args):
         line, = ax.plot(other_sdrs, label='other,resnet143_decouple_plus_4outputs,l1_wav', linewidth=linewidth)
         lines.append(line)
 
+    elif select == '3a': 
+        sdrs = load_sdrs(config='resnet143_vocals_ismir2021b', gpus=2)
+        line, = ax.plot(sdrs, label='resnet143_vocals_ismir2021b,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
     else:
         raise Exception('Error!')
     

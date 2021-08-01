@@ -223,12 +223,15 @@ class Separator:
 
 def inference(args):
 
+    # Need to use torch.distributed if models contain inplace_abn.abn.InPlaceABNSync.
+    import torch.distributed as dist
+    dist.init_process_group('gloo', init_method='file:///tmp/somefile', rank=0, world_size=1)
+
     # Arguments & parameters
     config_yaml = args.config_yaml
     checkpoint_path = args.checkpoint_path
     audio_path = args.audio_path
     output_path = args.output_path
-    select = args.select
 
     configs = read_yaml(config_yaml)
     sample_rate = configs['train']['sample_rate']
@@ -275,6 +278,7 @@ def inference(args):
     # Write out separated audio.
     soundfile.write(file='_zz.wav', data=sep_wav.T, samplerate=sample_rate)
     os.system("ffmpeg -y -loglevel panic -i _zz.wav {}".format(output_path))
+    print('Write out to {}'.format(output_path))
 
 
 if __name__ == "__main__":
@@ -284,7 +288,6 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_path", type=str, required=True)
     parser.add_argument("--audio_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
-    parser.add_argument("--select", type=str, required=True)
 
     args = parser.parse_args()
     inference(args)
