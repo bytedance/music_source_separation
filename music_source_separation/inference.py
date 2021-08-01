@@ -249,7 +249,7 @@ def inference(args):
 
     # Get model class.
     Model = get_model_class(model_type)
-
+    
     # Create model.
     model = Model(input_channels=input_channels, target_sources_num=target_sources_num)
 
