@@ -77,8 +77,8 @@ def plot_statistics(args):
         lines.append(line)
 
     elif select == '2c':
-        sdrs = load_sdrs(config='resnet143_other_ismir2021', gpus=2, source_type='other')
-        line, = ax.plot(sdrs, label='resnet143_other_ismir2021,l1_wav', linewidth=linewidth)
+        sdrs = load_sdrs(config='resnet143_accompaniment_ismir2021', gpus=2, source_type='accompaniment')
+        line, = ax.plot(sdrs, label='resnet143_accompaniment_ismir2021,l1_wav', linewidth=linewidth)
         lines.append(line)
         ylim = 20
 
