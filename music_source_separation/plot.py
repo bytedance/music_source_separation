@@ -11,14 +11,14 @@ import matplotlib.pyplot as plt
 
 def plot_statistics(args):
 
-    def load_sdrs(config, gpus, filename='train'):
+    def load_sdrs(config, gpus, filename='train', source_type='vocals'):
 
         # stat_path = '/home/tiger/workspaces/byte_separation/statistics/{}/config={},gpus={}/statistics.pkl'.format(filename, config, gpus)
         stat_path = './workspaces/music_source_separation/statistics/musdb18/train/config={},gpus={}/statistics.pkl'.format(config, gpus)
 
         stat_dict = pickle.load(open(stat_path, 'rb'))
         
-        median_sdrs = [e['median_sdr_dict']['vocals'] for e in stat_dict['test']]
+        median_sdrs = [e['median_sdr_dict'][source_type] for e in stat_dict['test']]
 
         return median_sdrs
 
@@ -53,6 +53,14 @@ def plot_statistics(args):
         line, = ax.plot(sdrs, label='resnet143_vocals_ismir2021,l1_wav', linewidth=linewidth)
         lines.append(line)
 
+        sdrs = load_sdrs(config='resnet143_bass_ismir2021', gpus=2, source_type='bass')
+        line, = ax.plot(sdrs, label='resnet143_bass_ismir2021,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+        sdrs = load_sdrs(config='resnet143_drums_ismir2021', gpus=2, source_type='drums')
+        line, = ax.plot(sdrs, label='resnet143_drums_ismir2021,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
         sdrs = load_sdrs(config='resnet143_decouple_plus_vocals', gpus=2)
         line, = ax.plot(sdrs, label='resnet143_decouple_plus_vocals,l1_wav', linewidth=linewidth)
         lines.append(line)
@@ -67,6 +75,12 @@ def plot_statistics(args):
         lines.append(line)
         line, = ax.plot(other_sdrs, label='other,resnet143_decouple_plus_4outputs,l1_wav', linewidth=linewidth)
         lines.append(line)
+
+    elif select == '2c':
+        sdrs = load_sdrs(config='resnet143_other_ismir2021', gpus=2, source_type='other')
+        line, = ax.plot(sdrs, label='resnet143_other_ismir2021,l1_wav', linewidth=linewidth)
+        lines.append(line)
+        ylim = 20
 
     elif select == '3a': 
         sdrs = load_sdrs(config='resnet143_vocals_ismir2021b', gpus=2)
