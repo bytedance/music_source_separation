@@ -1,1 +1,3 @@
 01.yaml		UNet
+02.yaml		2 outputs
+02_cond.yaml	4 outputs

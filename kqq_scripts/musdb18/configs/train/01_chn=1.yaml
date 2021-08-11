@@ -3,35 +3,31 @@ task_name: musdb18
 train:
     input_source_types:
         - vocals
-        - bass
-        - drums
-        - other
+        - accompaniment
     target_source_types: 
         - vocals
-        - bass
-        - drums
-        - other
-    indexes_dict: "indexes/musdb18/sr=44100_ch=2/train/full_train/vocals_bass_drums_other.pkl"
+    indexes_dict: "indexes/musdb18/sr=44100_ch=1/train/full_train/vocals_accompaniment.pkl"
     sample_rate: 44100
-    channels: 2
+    channels: 1
     segment_seconds: 3.0
-    model_type: ConditionalUNet
+    model_type: UNet
     loss_type: l1_wav
     mini_data: False
     mixaudio:
-        vocals: 1
-        bass: 1
-        drums: 1
-        other: 1
+        vocals: 2
+        accompaniment: 2
     augmentation:
         pitch_shift: 0
-    batch_data_preprocessor: ConditionalSisoBatchDataPreprocessor
-    evaluation_callback: Musdb18ConditionalEvaluationCallback
+        magnitude_scale:
+            lower_db: 0
+            higher_db: 0
+    batch_data_preprocessor: BasicBatchDataPreprocessor
+    evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
     batch_size: 16
     precision: 32
     steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
-    evaluate_step_frequency: 20000     # Evaluate every #evaluate_step_frequency steps.
+    evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.
     save_step_frequency: 50000  # Save every #save_step_frequency steps.
     early_stop_steps: 500001
     warm_up_steps: 1000
@@ -40,7 +36,7 @@ train:
     resume_checkpoint: ""
 
 evaluate:
-    train: "hdf5s/musdb18/sr=44100_ch=2/train/full_train"
-    test: "hdf5s/musdb18/sr=44100_ch=2/test"
+    train: "hdf5s/musdb18/sr=44100_ch=1/train/full_train"
+    test: "hdf5s/musdb18/sr=44100_ch=1/test"
     segment_seconds: 30.0
     batch_size: 1

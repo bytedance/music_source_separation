@@ -116,6 +116,13 @@ class Base:
 
         return mag, cos, sin
 
+    def wav_to_spectrogram(
+        self, input: torch.Tensor, eps: float = 1e-10
+    ) -> List[torch.Tensor]:
+
+        mag, cos, sin = self.wav_to_spectrogram_phase(input, eps)
+        return mag
+
     '''
     def spectrogram_to_wav(self, input, spectrogram, length=None):
         """Spectrogram to waveform.

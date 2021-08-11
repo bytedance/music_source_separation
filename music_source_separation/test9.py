@@ -230,8 +230,6 @@ def inference(args):
     # Arguments & parameters
     config_yaml = args.config_yaml
     checkpoint_path = args.checkpoint_path
-    audio_path = args.audio_path
-    output_path = args.output_path
 
     configs = read_yaml(config_yaml)
     sample_rate = configs['train']['sample_rate']
@@ -243,9 +241,6 @@ def inference(args):
     segment_samples = int(30 * sample_rate)
     batch_size = 1
     device = "cuda"
-
-    # paths
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # Get model class.
     Model = get_model_class(model_type)
@@ -263,10 +258,16 @@ def inference(args):
     # Create separator.
     separator = Separator(model=model, segment_samples=segment_samples, batch_size=batch_size, device=device)
 
-    # Load audio.
-    audio, _ = librosa.load(audio_path, sr=sample_rate, mono=False)
+    # mixture_path = '/home/tiger/datasets/voicebank-demand/noisy_trainset_wav/p226_004.wav'
+    # clean_path = '/home/tiger/datasets/voicebank-demand/clean_trainset_wav/p226_004.wav'
+    mixture_path = '/home/tiger/datasets/voicebank-demand/noisy_testset_wav/p232_010.wav'
+    clean_path = '/home/tiger/datasets/voicebank-demand/clean_testset_wav/p232_010.wav'
 
-    # audio = audio[None, :]
+    # Load audio.
+    audio, _ = librosa.load(mixture_path, sr=sample_rate, mono=False)
+
+    audio = audio[None, :]
+    # audio = np.tile(audio, (2, 1))
 
     input_dict = {'waveform': audio}
 
@@ -275,13 +276,36 @@ def inference(args):
 
     sep_wav = separator.separate(input_dict)
     # (channels_num, audio_samples)
+    sep_wav = sep_wav[0]
 
-    print('Separate time: {:.3f} s'.format(time.time() - separate_time))
+    from pesq import pesq
+    
+
+    clean, _ = librosa.load(clean_path, sr=16000, mono=True)
+
+    # pesq_ = pesq(self.EVALUATION_SAMPLE_RATE, clean, sep_wav, 'wb')
+    sep_wav2 = librosa.resample(y=sep_wav, orig_sr=sample_rate, target_sr=16000)
+    pesq_ = pesq(16000, clean, sep_wav2, 'wb')
+
+    mixture2, _ = librosa.load(mixture_path, sr=16000, mono=False)
+    pesq_ = pesq(16000, clean, mixture2, 'wb')
 
     # Write out separated audio.
-    soundfile.write(file='_zz.wav', data=sep_wav.T, samplerate=sample_rate)
-    os.system("ffmpeg -y -loglevel panic -i _zz.wav {}".format(output_path))
-    print('Write out to {}'.format(output_path))
+    soundfile.write(file='_zz.wav', data=sep_wav2, samplerate=16000)
+    soundfile.write(file='_zz_clean.wav', data=clean, samplerate=16000)
+    soundfile.write(file='_zz_mixture.wav', data=mixture2, samplerate=16000)
+
+    
+
+    import speechmetrics as sm
+    window = None
+    metrics = sm.load('relative', window)
+    reference_path = '_zz_clean.wav'
+    test_path = '_zz.wav'
+
+    scores = metrics(test_path, reference_path, rate=16000)
+
+    from IPython import embed; embed(using=False); os._exit(0)
 
 
 if __name__ == "__main__":
@@ -289,8 +313,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--config_yaml", type=str, required=True)
     parser.add_argument("--checkpoint_path", type=str, required=True)
-    parser.add_argument("--audio_path", type=str, required=True)
-    parser.add_argument("--output_path", type=str, required=True)
 
     args = parser.parse_args()
     inference(args)

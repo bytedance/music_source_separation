@@ -133,14 +133,18 @@ def preprocess_audio(audio, mono, origin_sr, sr, resample_type) -> np.array:
     Returns:
         output: ndarray, output audio
     """
-    if audio.ndim == 1:
-        audio = np.mean(audio, axis=0)[None, :]
-        # (1, audio_samples,)
+    if mono:
+        audio = np.mean(audio, axis=0)
+        # (audio_samples,)
 
     output = librosa.core.resample(
         audio, orig_sr=origin_sr, target_sr=sr, res_type=resample_type
     )
-    # (channels_num, audio_samples)
+    # (audio_samples,) | (channels_num, audio_samples)
+
+    if mono:
+        output = output[None, :]
+        # (1, audio_samples,)
 
     return output
 

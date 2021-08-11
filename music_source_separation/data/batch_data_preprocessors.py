@@ -125,7 +125,7 @@ class ConditionalSisoBatchDataPreprocessor:
             'condition': conditions,
         }
 
-        target_dict = {'target': targets}
+        target_dict = {'waveform': targets}
 
         return input_dict, target_dict
 

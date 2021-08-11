@@ -491,6 +491,6 @@ class ConditionalUNet(nn.Module, Base):
         separated_audio = self.feature_maps_to_wav(x, sp, sin_in, cos_in, audio_length)
         # separated_audio: (batch_size, output_sources_num * input_channels, segments_num)
 
-        output_dict = {'wav': separated_audio}
+        output_dict = {'waveform': separated_audio}
 
         return output_dict

@@ -59,7 +59,7 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
         params.append(param)
 
     # Uncomment for debug.
-    # write_single_audio_to_hdf5(params[0])
+    write_single_audio_to_hdf5(params[0])
 
     pack_hdf5s_time = time.time()
 
@@ -111,9 +111,11 @@ def load_audio(audio_path: str, mono: bool, sample_rate: float) -> np.array:
         sample_rate: float
     """
     audio, _ = librosa.core.load(audio_path, sr=sample_rate, mono=mono)
+    # (audio_samples,) | (channels_num, audio_samples)
 
-    if audio.ndim == 1:
+    if mono:
         audio = audio[None, :]
+        # (1, audio_samples,)
 
     return audio
 
