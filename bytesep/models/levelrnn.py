@@ -176,17 +176,17 @@ class LevelRNN(nn.Module, Base):
 
         self.downsample_ratio = 10 ** 4
 
-        self.encoder_block1 = EncoderBlock(in_channels=input_channels, out_channels=64)
-        self.encoder_block2 = EncoderBlock(in_channels=64, out_channels=128)
-        self.encoder_block3 = EncoderBlock(in_channels=128, out_channels=256)
-        self.encoder_block4 = EncoderBlock(in_channels=256, out_channels=512)
+        self.encoder_block1 = EncoderBlock(in_channels=input_channels, out_channels=16)
+        self.encoder_block2 = EncoderBlock(in_channels=16, out_channels=64)
+        self.encoder_block3 = EncoderBlock(in_channels=64, out_channels=256)
+        self.encoder_block4 = EncoderBlock(in_channels=256, out_channels=1024)
 
-        self.decoder_block1 = DecoderBlock(in_channels=512, out_channels=512, stride=10)
-        self.decoder_block2 = DecoderBlock(in_channels=512, out_channels=256, stride=10)
-        self.decoder_block3 = DecoderBlock(in_channels=256, out_channels=128, stride=10)
-        self.decoder_block4 = DecoderBlock(in_channels=128, out_channels=64, stride=10)
+        self.decoder_block1 = DecoderBlock(in_channels=1024, out_channels=1024, stride=10)
+        self.decoder_block2 = DecoderBlock(in_channels=1024, out_channels=256, stride=10)
+        self.decoder_block3 = DecoderBlock(in_channels=256, out_channels=64, stride=10)
+        self.decoder_block4 = DecoderBlock(in_channels=64, out_channels=16, stride=10)
 
-        self.after_rnn = EncoderBlock(in_channels=64, out_channels=2)
+        self.after_rnn = EncoderBlock(in_channels=16, out_channels=2)
 
         self.init_weights()
 
