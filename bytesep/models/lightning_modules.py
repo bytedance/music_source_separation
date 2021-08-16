@@ -77,8 +77,6 @@ class LitSourceSeparation(pl.LightningModule):
             mixture=input_dict['waveform'],
         )
 
-        print(loss)
-
         return loss
     
 
