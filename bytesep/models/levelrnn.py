@@ -186,7 +186,9 @@ class LevelRNN(nn.Module, Base):
         self.decoder_block3 = DecoderBlock(in_channels=256, out_channels=64, stride=10)
         self.decoder_block4 = DecoderBlock(in_channels=64, out_channels=16, stride=10)
 
-        self.after_rnn = EncoderBlock(in_channels=16, out_channels=2)
+        # self.after_rnn = EncoderBlock(in_channels=16, out_channels=2)
+        self.after_fc = nn.Conv1d(in_channels=16, out_channels=2, kernel_size=1, 
+            stride=1, padding=0, bias=True)
 
         self.init_weights()
 
@@ -194,7 +196,7 @@ class LevelRNN(nn.Module, Base):
         r"""Initialize weights."""
         # init_bn(self.bn0)
         # init_layer(self.after_conv2)
-        pass
+        init_layer(self.after_fc)
 
     def forward(self, input_dict: Dict) -> Dict:
         """Forward data into the module.
@@ -237,7 +239,8 @@ class LevelRNN(nn.Module, Base):
         x7 = self.decoder_block3(x6, x2)
         x8 = self.decoder_block4(x7, x1)
 
-        _, x = self.after_rnn(x8, segment_samples=10)
+        # _, x = self.after_rnn(x8, segment_samples=10)
+        x = self.after_fc(x8)
         
         x = x[:, :, 0:origin_len]  # (bs, feature_maps, time_steps, freq_bins)
 

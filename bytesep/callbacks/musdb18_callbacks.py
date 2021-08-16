@@ -49,6 +49,7 @@ def get_musdb18_callbacks(
     evaluation_callback = configs['train']['evaluation_callback']
     target_source_types = configs['train']['target_source_types']
     input_channels = configs['train']['channels']
+    train_hdf5s_dir = os.path.join(workspace, configs['evaluate']['train'])
     test_hdf5s_dir = os.path.join(workspace, configs['evaluate']['test'])
     test_segment_seconds = configs['evaluate']['segment_seconds']
     sample_rate = configs['train']['sample_rate']
@@ -72,6 +73,20 @@ def get_musdb18_callbacks(
     statistics_container = StatisticsContainer(statistics_path)
 
     # evaluation callback
+    evaluate_train_callback = EvaluationCallback(
+        model=model,
+        target_source_types=target_source_types,
+        input_channels=input_channels,
+        hdf5s_dir=train_hdf5s_dir,
+        split='train',
+        segment_samples=test_segment_samples,
+        batch_size=test_batch_size,
+        device=evaluate_device,
+        evaluate_step_frequency=evaluate_step_frequency,
+        logger=logger,
+        statistics_container=statistics_container,
+    )
+
     evaluate_test_callback = EvaluationCallback(
         model=model,
         target_source_types=target_source_types,
@@ -86,7 +101,7 @@ def get_musdb18_callbacks(
         statistics_container=statistics_container,
     )
 
-    callbacks = [save_checkpoints_callback, evaluate_test_callback]
+    callbacks = [save_checkpoints_callback, evaluate_train_callback, evaluate_test_callback]
 
     return callbacks
 
