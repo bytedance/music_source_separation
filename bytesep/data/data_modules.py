@@ -6,8 +6,8 @@ import numpy as np
 import torch
 from pytorch_lightning.core.datamodule import LightningDataModule
 
-from music_source_separation.data.samplers import DistributedSamplerWrapper
-from music_source_separation.utils import int16_to_float32
+from bytesep.data.samplers import DistributedSamplerWrapper
+from bytesep.utils import int16_to_float32
 
 
 class DataModule(LightningDataModule):

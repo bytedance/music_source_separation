@@ -5,7 +5,7 @@ import pickle
 
 import h5py
 
-from music_source_separation.utils import read_yaml
+from bytesep.utils import read_yaml
 
 
 def create_indexes(args) -> NoReturn:

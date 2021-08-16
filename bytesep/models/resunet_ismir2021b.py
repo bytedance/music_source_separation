@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torchlibrosa.stft import STFT, ISTFT, magphase
 from inplace_abn.abn import InPlaceABNSync
 
-from music_source_separation.models.pytorch_modules import init_bn, init_layer
+from bytesep.models.pytorch_modules import init_bn, init_layer
 
 
 class ConvBlockRes(nn.Module):

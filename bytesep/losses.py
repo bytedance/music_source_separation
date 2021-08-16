@@ -1,6 +1,6 @@
 from typing import Callable
 
-from music_source_separation.models.pytorch_modules import Base
+from bytesep.models.pytorch_modules import Base
 from torchlibrosa.stft import STFT
 import torch
 import torch.nn as nn

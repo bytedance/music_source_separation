@@ -9,7 +9,7 @@ import librosa
 import musdb
 import numpy as np
 
-from music_source_separation.utils import float32_to_int16
+from bytesep.utils import float32_to_int16
 
 # Source types of the MUSDB18 dataset.
 SOURCE_TYPES = ["vocals", "drums", "bass", "other", "accompaniment"]

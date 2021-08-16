@@ -11,9 +11,9 @@ import pytorch_lightning as pl
 import torch.nn as nn
 from pytorch_lightning.utilities import rank_zero_only
 
-from music_source_separation.callbacks.base_callbacks import SaveCheckpointsCallback
-from music_source_separation.inference import Separator
-from music_source_separation.utils import (
+from bytesep.callbacks.base_callbacks import SaveCheckpointsCallback
+from bytesep.inference import Separator
+from bytesep.utils import (
     StatisticsContainer,
     int16_to_float32,
     read_yaml,

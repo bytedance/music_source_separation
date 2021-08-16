@@ -19,7 +19,7 @@ TODO
 We use the MUSDB18 dataset to train music source separation systems. The trained system can be used to separate vocals, accompaniments, bass, and other sources. Execute the following script to download and decompress the MUSDB18 dataset:
 
 ```bash
-./scripts/download_musdb18_from_zenodo.sh
+./scripts/musdb18/download_musdb18_from_zenodo.sh
 ```
 
 The dataset looks like:

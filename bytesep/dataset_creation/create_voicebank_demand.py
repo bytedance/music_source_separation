@@ -9,7 +9,7 @@ import h5py
 import librosa
 import numpy as np
 
-from music_source_separation.utils import float32_to_int16
+from bytesep.utils import float32_to_int16
 
 
 def pack_audios_to_hdf5s(args) -> NoReturn:

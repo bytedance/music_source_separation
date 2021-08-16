@@ -11,7 +11,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchlibrosa.stft import STFT, ISTFT, magphase
 
-from music_source_separation.models.pytorch_modules import (
+from bytesep.models.pytorch_modules import (
     Base,
     init_bn,
     init_embedding,

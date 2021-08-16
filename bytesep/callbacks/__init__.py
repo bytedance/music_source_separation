@@ -3,10 +3,10 @@ from typing import List
 import pytorch_lightning as pl
 import torch.nn as nn
 
-from music_source_separation.callbacks.musdb18_callbacks import get_musdb18_callbacks
-from music_source_separation.callbacks.voicebank_demand_callbacks import (
-    get_voicebank_demand_callbacks,
-)
+from bytesep.callbacks.musdb18_callbacks import get_musdb18_callbacks
+# from bytesep.callbacks.voicebank_demand_callbacks import (
+#     get_voicebank_demand_callbacks,
+# )
 
 
 def get_callbacks(

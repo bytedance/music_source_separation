@@ -8,20 +8,20 @@ from typing import List
 import pytorch_lightning as pl
 from pytorch_lightning.plugins import DDPPlugin
 
-from music_source_separation.callbacks import get_callbacks
-from music_source_separation.data.augmentors import Augmentor
-from music_source_separation.data.batch_data_preprocessors import (
+from bytesep.callbacks import get_callbacks
+from bytesep.data.augmentors import Augmentor
+from bytesep.data.batch_data_preprocessors import (
     get_batch_data_preprocessor_class,
 )
-from music_source_separation.data.data_modules import DataModule, Dataset
-from music_source_separation.data.samplers import SegmentSampler
-from music_source_separation.losses import get_loss_function
-from music_source_separation.models.lightning_modules import (
+from bytesep.data.data_modules import DataModule, Dataset
+from bytesep.data.samplers import SegmentSampler
+from bytesep.losses import get_loss_function
+from bytesep.models.lightning_modules import (
     LitSourceSeparation,
     get_model_class,
 )
-from music_source_separation.optimizers.lr_schedulers import get_lr_lambda
-from music_source_separation.utils import (
+from bytesep.optimizers.lr_schedulers import get_lr_lambda
+from bytesep.utils import (
     create_logging,
     get_pitch_shift_factor,
     read_yaml,

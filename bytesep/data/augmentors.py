@@ -3,7 +3,7 @@ from typing import Dict
 import librosa
 import numpy as np
 
-from music_source_separation.utils import (
+from bytesep.utils import (
     db_to_magnitude,
     get_pitch_shift_factor,
     magnitude_to_db,

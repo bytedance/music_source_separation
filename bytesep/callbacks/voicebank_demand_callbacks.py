@@ -13,9 +13,9 @@ import torch.nn as nn
 from pesq import pesq
 from pytorch_lightning.utilities import rank_zero_only
 
-from music_source_separation.callbacks.base_callbacks import SaveCheckpointsCallback
-from music_source_separation.inference import Separator
-from music_source_separation.utils import StatisticsContainer, read_yaml
+from bytesep.callbacks.base_callbacks import SaveCheckpointsCallback
+from bytesep.inference import Separator
+from bytesep.utils import StatisticsContainer, read_yaml
 
 
 def get_voicebank_demand_callbacks(
@@ -289,7 +289,7 @@ class EvaluationCallback(pl.Callback):
                 # self.model.train()
 
                 
-                h5_path = '/home/tiger/my_code_2019.12-/python/music_source_separation/workspaces/music_source_separation/hdf5s/voicebank-demand/sr=44100_ch=1/train/p226_002.h5'
+                h5_path = '/home/tiger/my_code_2019.12-/python/bytesep/workspaces/music_source_separation/hdf5s/voicebank-demand/sr=44100_ch=1/train/p226_002.h5'
 
                 import h5py
                 from music_source_separation.utils import int16_to_float32
@@ -307,7 +307,7 @@ class EvaluationCallback(pl.Callback):
                     mixture2, _ = librosa.core.load(mixture_path, sr=44100, mono=True)
                     clean2, _ = librosa.core.load(clean_path, sr=44100, mono=True)
 
-                    from music_source_separation.utils import int16_to_float32, float32_to_int16
+                    from bytesep.utils import int16_to_float32, float32_to_int16
                     noise2 = int16_to_float32(float32_to_int16(mixture2 - clean2))
                     clean2 = int16_to_float32(float32_to_int16(clean2))
                     
