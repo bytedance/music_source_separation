@@ -304,5 +304,13 @@ def get_model_class(model_type):
         from bytesep.models.levelrnn2 import LevelRNN2
         return LevelRNN2
 
+    elif model_type == 'WavUNet':
+        from bytesep.models.wavunet import WavUNet
+        return WavUNet
+
+    elif model_type == 'WavUNetLevelRNN':
+        from bytesep.models.wavunet_levelrnn import WavUNetLevelRNN
+        return WavUNetLevelRNN
+
     else:
         raise NotImplementedError

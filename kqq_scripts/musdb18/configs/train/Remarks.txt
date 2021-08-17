@@ -3,3 +3,5 @@
 02_cond.yaml	4 outputs
 03.yaml		LevelRNN
 03.yaml		LevelRNN2
+04.yaml		WavUNet
+05.yaml		WavUNetLevelRNN
