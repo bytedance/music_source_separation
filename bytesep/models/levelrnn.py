@@ -106,20 +106,20 @@ class DecoderBlock(nn.Module):
         momentum = 0.01
         self.segment_samples = stride
 
-        self.conv1 = torch.nn.ConvTranspose1d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=stride,
-            stride=stride,
-            padding=0,
-            bias=False,
-            dilation=1,
-        )
+        # self.conv1 = torch.nn.ConvTranspose1d(
+        #     in_channels=in_channels,
+        #     out_channels=out_channels,
+        #     kernel_size=stride,
+        #     stride=stride,
+        #     padding=0,
+        #     bias=False,
+        #     dilation=1,
+        # )
 
-        self.bn1 = nn.BatchNorm1d(out_channels, momentum=momentum)
+        # self.bn1 = nn.BatchNorm1d(out_channels, momentum=momentum)
 
         self.rnn = nn.GRU(
-            input_size=out_channels * 2, 
+            input_size=in_channels, 
             hidden_size=out_channels // 2, 
             num_layers=1, bias=True, 
             batch_first=True, dropout=0., 
@@ -129,10 +129,11 @@ class DecoderBlock(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        init_layer(self.conv1)
-        init_bn(self.bn1)
+        # init_layer(self.conv1)
+        # init_bn(self.bn1)
         init_gru(self.rnn)
 
+    '''
     def forward(self, input_tensor: torch.Tensor, concat_tensor: torch.Tensor):
         r"""Forward data into the module.
 
@@ -143,6 +144,7 @@ class DecoderBlock(nn.Module):
         Returns:
             output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
         """
+
         
         x = F.leaky_relu_(self.bn1(self.conv1(input_tensor)), negative_slope=0.01)
 
@@ -164,7 +166,38 @@ class DecoderBlock(nn.Module):
         x = x.reshape(batch_size, channels_num, total_samples)
         
         return x
+    '''
 
+    def forward(self, input_tensor: torch.Tensor, concat_tensor: torch.Tensor):
+        r"""Forward data into the module.
+
+        Args:
+            torch_tensor: (batch_size, in_feature_maps, downsampled_time_steps)
+            concat_tensor: (batch_size, in_feature_maps, time_steps)
+
+        Returns:
+            output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
+        """
+
+        x = concat_tensor
+
+        batch_size, channels_num, total_samples = x.shape
+        segments_num = total_samples // self.segment_samples
+
+        x = x.reshape(batch_size, channels_num, segments_num, self.segment_samples)
+        x = x + input_tensor[:, :, :, None]
+        x = x.permute(0, 2, 3, 1)   # (batch_size, segments_num, segment_samples, channels_num)
+        x = x.reshape(batch_size * segments_num, self.segment_samples, channels_num)
+
+        x, _ = self.rnn(x)  # (batch_size * segments_num, segment_samples, channels_num)
+        channels_num = x.shape[-1]
+
+        x = x.reshape(batch_size, segments_num, self.segment_samples, channels_num)
+        x = x.permute(0, 3, 1, 2)   # (batch_size, channels_num, segments_num, segment_samples)
+
+        x = x.reshape(batch_size, channels_num, total_samples)
+        
+        return x
 
 class LevelRNN(nn.Module, Base):
     def __init__(self, input_channels: int, target_sources_num: int):
@@ -181,10 +214,10 @@ class LevelRNN(nn.Module, Base):
         self.encoder_block3 = EncoderBlock(in_channels=64, out_channels=256)
         self.encoder_block4 = EncoderBlock(in_channels=256, out_channels=1024)
 
-        self.decoder_block1 = DecoderBlock(in_channels=1024, out_channels=1024, stride=10)
-        self.decoder_block2 = DecoderBlock(in_channels=1024, out_channels=256, stride=10)
-        self.decoder_block3 = DecoderBlock(in_channels=256, out_channels=64, stride=10)
-        self.decoder_block4 = DecoderBlock(in_channels=64, out_channels=16, stride=10)
+        self.decoder_block1 = DecoderBlock(in_channels=1024, out_channels=256, stride=10)
+        self.decoder_block2 = DecoderBlock(in_channels=256, out_channels=64, stride=10)
+        self.decoder_block3 = DecoderBlock(in_channels=64, out_channels=16, stride=10)
+        self.decoder_block4 = DecoderBlock(in_channels=16, out_channels=16, stride=10)
 
         # self.after_rnn = EncoderBlock(in_channels=16, out_channels=2)
         self.after_fc = nn.Conv1d(in_channels=16, out_channels=2, kernel_size=1, 
