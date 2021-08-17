@@ -5,7 +5,6 @@ import numpy as np
 import torch.distributed as dist
 
 
-'''
 class SegmentSampler:
     def __init__(
         self,
@@ -158,9 +157,8 @@ class SegmentSampler:
     def load_state_dict(self, state) -> NoReturn:
         self.pointers_dict = state['pointers_dict']
         self.indexes_dict = state['indexes_dict']
+
 '''
-
-
 class SegmentSampler:
     def __init__(
         self,
@@ -314,7 +312,7 @@ class SegmentSampler:
     def load_state_dict(self, state) -> NoReturn:
         self.pointers_dict = state['pointers_dict']
         self.indexes_dict = state['indexes_dict']
-
+'''
 
 class DistributedSamplerWrapper:
     def __init__(self, sampler):
