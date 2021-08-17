@@ -21,3 +21,4 @@ python3 bytesep/dataset_creation/create_voicebank_demand.py pack_audios_to_hdf5s
     --hdf5s_dir=$HDF5S_DIR \
     --sample_rate=$SAMPLE_RATE \
     --channels=$CHANNELS
+    
