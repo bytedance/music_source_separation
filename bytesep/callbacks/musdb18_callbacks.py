@@ -101,7 +101,8 @@ def get_musdb18_callbacks(
         statistics_container=statistics_container,
     )
 
-    callbacks = [save_checkpoints_callback, evaluate_train_callback, evaluate_test_callback]
+    # callbacks = [save_checkpoints_callback, evaluate_train_callback, evaluate_test_callback]
+    callbacks = [save_checkpoints_callback, evaluate_test_callback]
 
     return callbacks
 
