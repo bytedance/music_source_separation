@@ -215,6 +215,7 @@ def train(args) -> None:
     # loss function
     loss_function = get_loss_function(loss_type=loss_type)
 
+    
     # callbacks
     callbacks = get_callbacks(
         task_name=task_name,

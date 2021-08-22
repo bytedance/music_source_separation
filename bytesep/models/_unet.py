@@ -199,7 +199,6 @@ class UNet(nn.Module, Base):
         pad_mode = "reflect"
         window = "hann"
         activation = "relu"
-        # activation = "leaky_relu"
         momentum = 0.01
 
         self.subbands_num = 1
@@ -326,7 +325,6 @@ class UNet(nn.Module, Base):
             activation=activation,
             momentum=momentum,
         )
-        
         self.decoder_block6 = DecoderBlock(
             in_channels=64,
             out_channels=32,
@@ -355,8 +353,7 @@ class UNet(nn.Module, Base):
             padding=(0, 0),
             bias=True,
         )
-        
-        
+
         self.init_weights()
 
     def init_weights(self):

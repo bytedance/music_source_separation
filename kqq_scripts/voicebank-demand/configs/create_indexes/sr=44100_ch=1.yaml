@@ -6,9 +6,9 @@ train:
         speech:
             voicebank-demand:
                 directory: "hdf5s/voicebank-demand/sr=44100_ch=1/train"
-                hop_seconds: 0.1
+                hop_seconds: 3.
         noise:
             voicebank-demand:
                 directory: "hdf5s/voicebank-demand/sr=44100_ch=1/train"
-                hop_seconds: 0.1
+                hop_seconds: 3.
     indexes: "indexes/voicebank-demand/sr=44100_ch=1/train/speech_noise.pkl"

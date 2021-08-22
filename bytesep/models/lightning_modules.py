@@ -284,9 +284,13 @@ def get_model_class(model_type):
         from bytesep.models.unet import UNet
         return UNet
 
-    elif model_type == 'UNet2':
-        from bytesep.models.unet2 import UNet2
-        return UNet2
+    elif model_type == 'UNetSubbandTime':
+        from bytesep.models.unet_subbandtime import UNetSubbandTime
+        return UNetSubbandTime
+
+    # elif model_type == 'UNet2':
+    #     from bytesep.models.unet2 import UNet2
+    #     return UNet2
 
     elif model_type == 'ResUNet143_DecouplePlus':
         from bytesep.models.resunet import ResUNet143_DecouplePlus

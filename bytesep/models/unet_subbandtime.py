@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from torchlibrosa.stft import STFT, ISTFT, magphase
+from bytesep.models.subband_tools.pqmf import PQMF
 
 from bytesep.models.pytorch_modules import (
     Base,
@@ -185,16 +186,16 @@ class DecoderBlock(nn.Module):
         return output_tensor
 
 
-class UNet(nn.Module, Base):
+class UNetSubbandTime(nn.Module, Base):
     def __init__(self, input_channels: int, target_sources_num: int):
         r"""UNet."""
-        super(UNet, self).__init__()
+        super(UNetSubbandTime, self).__init__()
 
         self.input_channels = input_channels
         self.target_sources_num = target_sources_num
 
-        window_size = 2048
-        hop_size = 441
+        window_size = 512
+        hop_size = 110
         center = True
         pad_mode = "reflect"
         window = "hann"
@@ -202,10 +203,12 @@ class UNet(nn.Module, Base):
         # activation = "leaky_relu"
         momentum = 0.01
 
-        self.subbands_num = 1
+        self.subbands_num = 4
         self.K = 3  # outputs: |M|, cos∠M, sin∠M
 
         self.downsample_ratio = 2 ** 6  # This number equals 2^{#encoder_blcoks}
+
+        self.pqmf = PQMF(N=self.subbands_num, M=64, project_root='bytesep/models/subband_tools/filters')
 
         self.stft = STFT(
             n_fft=window_size,
@@ -462,7 +465,9 @@ class UNet(nn.Module, Base):
         mixtures = input_dict['waveform']
         # (batch_size, input_channels, segment_samples)
 
-        mag, cos_in, sin_in = self.wav_to_spectrogram_phase(mixtures)
+        x0 = self.pqmf.analysis(mixtures)
+
+        mag, cos_in, sin_in = self.wav_to_spectrogram_phase(x0)
         # mag, cos_in, sin_in: (batch_size, input_channels, time_steps, freq_bins)
 
         # Batch normalize on individual frequency bins.
@@ -483,7 +488,7 @@ class UNet(nn.Module, Base):
         # Let frequency bins be evenly divided by 2, e.g., 1025 -> 1024
         x = x[..., 0 : x.shape[-1] - 1]  # (bs, input_channels, T, F)
 
-        x = self.subband.analysis(x)
+        # x = self.subband.analysis(x)
         # (bs, input_channels, T, F'), where F' = F // subbands_num
 
         # UNet
@@ -513,16 +518,20 @@ class UNet(nn.Module, Base):
         x = self.after_conv2(x)
         # (batch_size, input_channles * subbands_num * targets_num * k, T, F')
 
-        x = self.subband.synthesis(x)
-        # (batch_size, input_channles * targets_num * K, T, F)
-
         # Recover shape
         x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 1024 -> 1025.
         x = x[:, :, 0:origin_len, :]  # (bs, feature_maps, time_steps, freq_bins)
 
-        audio_length = mixtures.shape[2]
+        audio_length = x0.shape[2] 
 
-        separated_audio = self.feature_maps_to_wav(x, mag, sin_in, cos_in, audio_length)
+        # (batch_size, input_channles * targets_num * K, T, F)
+        M1 = self.target_sources_num * self.input_channels * self.K
+        M2 = self.target_sources_num * self.input_channels
+        a1 = torch.cat([self.feature_maps_to_wav(x[:, j * M1 : (j + 1) * M1, :, :], mag[:, j * M2 : (j + 1) * M2, :, :], sin_in[:, j * M2 : (j + 1) * M2, :, :], cos_in[:, j * M2 : (j + 1) * M2, :, :], audio_length) for j in range(self.subbands_num)], dim=1)
+
+        separated_audio = self.pqmf.synthesis(a1)
+
+        # separated_audio = self.feature_maps_to_wav(x, mag, sin_in, cos_in, audio_length)
         # separated_audio: (batch_size, target_sources_num * input_channels, segments_num)
 
         output_dict = {'waveform': separated_audio}

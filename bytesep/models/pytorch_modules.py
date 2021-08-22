@@ -217,7 +217,7 @@ class Subband:
             channels_num,
             self.subbands_num,
             time_steps,
-            freq_bins // self.subbands_num,
+            subband_freq_bins,
         )
         # x: (batch_size, channels_num, subbands_num, time_steps, freq_bins // subbands_num)
 

@@ -124,3 +124,11 @@ class StatisticsContainer(object):
 
         self.statistics_dict = resume_statistics_dict
     '''
+
+def calculate_sdr(ref, est):
+    s_true = ref
+    s_artif = est - ref
+    sdr = 10. * (
+        np.log10(np.clip(np.mean(s_true ** 2), 1e-8, np.inf)) \
+        - np.log10(np.clip(np.mean(s_artif ** 2), 1e-8, np.inf)))
+    return sdr

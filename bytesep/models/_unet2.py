@@ -552,7 +552,7 @@ class UNet2(nn.Module, Base):
         activation = "relu"
         momentum = 0.01
 
-        self.subbands_num = 4
+        self.subbands_num = 1
         self.K = 1  # outputs: |M|, cos∠M, sin∠M
 
         self.downsample_ratio = 2 ** 6  # This number equals 2^{#encoder_blcoks}
@@ -827,6 +827,7 @@ class UNet2(nn.Module, Base):
         # mag, cos_in, sin_in: (batch_size, input_channels, time_steps, freq_bins)
 
         # Batch normalize on individual frequency bins.
+        # x = mag
         x = mag.transpose(1, 3)
         x = self.bn0(x)
         x = x.transpose(1, 3)

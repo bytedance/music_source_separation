@@ -4,9 +4,9 @@ import pytorch_lightning as pl
 import torch.nn as nn
 
 from bytesep.callbacks.musdb18_callbacks import get_musdb18_callbacks
-# from bytesep.callbacks.voicebank_demand_callbacks import (
-#     get_voicebank_demand_callbacks,
-# )
+from bytesep.callbacks.voicebank_demand_callbacks import (
+    get_voicebank_demand_callbacks,
+)
 
 
 def get_callbacks(
@@ -49,6 +49,19 @@ def get_callbacks(
 
     elif task_name == 'voicebank-demand':
         return get_voicebank_demand_callbacks(
+            config_yaml=config_yaml,
+            dataset_dir=dataset_dir,
+            workspace=workspace,
+            checkpoints_dir=checkpoints_dir,
+            statistics_path=statistics_path,
+            logger=logger,
+            model=model,
+            evaluate_device=evaluate_device,
+        )
+
+    elif task_name == 'violin-piano':
+        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
+        return get_violin_piano_callbacks(
             config_yaml=config_yaml,
             dataset_dir=dataset_dir,
             workspace=workspace,

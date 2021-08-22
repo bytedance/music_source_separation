@@ -7,3 +7,5 @@ CUDA_VISIBLE_DEVICES=3 python3 music_source_separation/inference.py \
     --checkpoint_path=$CHECKPOINT_PATH \
     --audio_path='resources/vocals_accompaniment_10s.mp3' \
     --output_path='sep_results/vocals_accompaniment_10s.mp3'
+
+

@@ -1,22 +1,22 @@
 ---
-task_name: voicebank-demand
+task_name: violin-piano
 train:
     input_source_types:
-        - speech
-        - noise
+        - violin
+        - piano
     target_source_types: 
-        - speech
-    indexes_dict: "indexes/voicebank-demand/sr=44100_ch=1/train/speech_noise.pkl"
+        - violin
+    indexes_dict: "indexes/violin_piano/sr=44100_ch=2/train/violin_piano.pkl"
     sample_rate: 44100
-    channels: 1
+    channels: 2
     segment_seconds: 3.0
-    model_type: UNetSubbandTime
+    model_type: UNet
     loss_type: l1_wav
     # loss_type: l1_wav_l1_sp
     mini_data: False
     mixaudio:
-        speech: 1
-        noise: 1
+        violin: 1
+        piano: 1
     augmentation:
         pitch_shift: 0
     batch_data_preprocessor: BasicBatchDataPreprocessor
@@ -25,8 +25,8 @@ train:
     precision: 32
     steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
     # evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.
-    evaluate_step_frequency: 5000     # Evaluate every #evaluate_step_frequency steps.
-    save_step_frequency: 20000  # Save every #save_step_frequency steps.
+    evaluate_step_frequency: 2000     # Evaluate every #evaluate_step_frequency steps.
+    save_step_frequency: 10000  # Save every #save_step_frequency steps.
     early_stop_steps: 200001
     # warm_up_steps: 1000
     # warm_up_steps: 100
@@ -36,10 +36,11 @@ train:
     resume_checkpoint: ""
 
 evaluate:
-    segment_seconds: 3.0
+    segment_seconds: 10.0
     test:
-        clean_dir: "clean_testset_wav"
-        noisy_dir: "noisy_testset_wav"
+        # clean_dir: "clean_testset_wav"
+        # noisy_dir: "noisy_testset_wav"
         # clean_dir: "clean_trainset_wav"
         # noisy_dir: "noisy_trainset_wav"
+        evaluation_audios_dir: "evaluation_audios/violin-piano/sr=44100_ch=2/test"
     batch_size: 1
