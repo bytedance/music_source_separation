@@ -80,6 +80,8 @@ def create_indexes(args) -> NoReturn:
 
             hop_samples = int(dataset_types[dataset_type]["hop_seconds"] * sample_rate)
 
+            key = dataset_types[dataset_type]["key"]
+
             hdf5_names = sorted(os.listdir(hdf5s_dir))
             print("Hdf5 files num: {}".format(len(hdf5_names)))
 
@@ -92,9 +94,9 @@ def create_indexes(args) -> NoReturn:
                 with h5py.File(hdf5_path, "r") as hf:
 
                     start_sample = 0
-                    while start_sample + segment_samples < hf[source_type].shape[-1]:
+                    while start_sample + segment_samples < hf[key].shape[-1]:
                         indexes_dict[source_type].append(
-                            [hdf5_path, start_sample, start_sample + segment_samples]
+                            [hdf5_path, key, start_sample, start_sample + segment_samples]
                         )
 
                         start_sample += hop_samples
@@ -103,7 +105,7 @@ def create_indexes(args) -> NoReturn:
                     # then use the entire audio as a segment.
                     if start_sample == 0:
                         indexes_dict[source_type].append(
-                            [hdf5_path, start_sample, start_sample + segment_samples]
+                            [hdf5_path, key, start_sample, start_sample + segment_samples]
                         )
 
         print(

@@ -102,12 +102,12 @@ class Dataset:
             for m in meta[source_type]:
                 # E.g., ['.../song_A.h5', 3995460, 4127760]
 
-                [hdf5_path, start_sample, end_sample] = m
+                [hdf5_path, key, start_sample, end_sample] = m
 
                 with h5py.File(hdf5_path, 'r') as hf:
 
                     waveform = int16_to_float32(
-                        hf[source_type][:, start_sample:end_sample]
+                        hf[key][:, start_sample:end_sample]
                     )
 
                     if self.augmentor:

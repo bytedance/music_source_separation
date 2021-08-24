@@ -122,7 +122,7 @@ def load_audio(audio_path: str, mono: bool, sample_rate: float) -> np.array:
     audio, _ = librosa.core.load(audio_path, sr=sample_rate, mono=mono)
     # (audio_samples,) | (channels_num, audio_samples)
 
-    if mono:
+    if audio.ndim == 1:
         audio = audio[None, :]
         # (1, audio_samples,)
 

@@ -228,6 +228,7 @@ def train(args) -> None:
         model=model,
         evaluate_device=evaluate_device,
     )
+
     # callbacks = []
 
     # learning rate reduce function

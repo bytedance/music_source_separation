@@ -142,7 +142,7 @@ def preprocess_audio(audio, mono, origin_sr, sr, resample_type) -> np.array:
     )
     # (audio_samples,) | (channels_num, audio_samples)
 
-    if mono:
+    if output.ndim == 1:
         output = output[None, :]
         # (1, audio_samples,)
 

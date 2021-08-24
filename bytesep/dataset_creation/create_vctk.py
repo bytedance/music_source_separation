@@ -45,41 +45,44 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
     # Only pack data for training data
     assert split == "train"
 
-    audios_dir = os.path.join(dataset_dir, 'mp3s')
-
-    meta_csv = os.path.join(dataset_dir, 'validation.csv')
-    names_dict = read_csv(meta_csv)
-
-    # speech_dir = os.path.join(dataset_dir, "clean_{}set_wav".format(split))
-    # mixture_dir = os.path.join(dataset_dir, "noisy_{}set_wav".format(split))
+    audios_dir = os.path.join(dataset_dir, 'wav48', split)
 
     os.makedirs(hdf5s_dir, exist_ok=True)
 
-    # Read names
-    # audio_names = sorted(os.listdir(speech_dir))
-
-    audio_names = names_dict['{}_name'.format(split)]
+    # audio_names = names_dict['{}_name'.format(split)]
 
     params = []
 
-    for audio_index, audio_name in enumerate(audio_names):
+    speaker_ids = sorted(os.listdir(audios_dir))
 
-        audio_path = os.path.join(audios_dir, audio_name)
+    audio_index = 0
 
-        hdf5_path = os.path.join(
-            hdf5s_dir, "{}.h5".format(pathlib.Path(audio_name).stem)
-        )
+    for speaker_id in speaker_ids:
 
-        param = (
-            audio_index,
-            audio_name,
-            source_type,
-            audio_path,
-            mono,
-            sample_rate,
-            hdf5_path,
-        )
-        params.append(param)
+        speaker_audios_dir = os.path.join(audios_dir, speaker_id)
+
+        audio_names = sorted(os.listdir(speaker_audios_dir))
+
+        for audio_name in audio_names:
+
+            audio_path = os.path.join(speaker_audios_dir, audio_name)
+
+            hdf5_path = os.path.join(
+                hdf5s_dir, "{}.h5".format(pathlib.Path(audio_name).stem)
+            )
+
+            param = (
+                audio_index,
+                audio_name,
+                source_type,
+                audio_path,
+                mono,
+                sample_rate,
+                hdf5_path,
+            )
+            params.append(param)
+
+            audio_index += 1
 
     # Uncomment for debug.
     # write_single_audio_to_hdf5(params[0])

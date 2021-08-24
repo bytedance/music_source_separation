@@ -72,5 +72,44 @@ def get_callbacks(
             evaluate_device=evaluate_device,
         )
 
+    elif task_name == 'piano-symphony':
+        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
+        return get_violin_piano_callbacks(
+            config_yaml=config_yaml,
+            dataset_dir=dataset_dir,
+            workspace=workspace,
+            checkpoints_dir=checkpoints_dir,
+            statistics_path=statistics_path,
+            logger=logger,
+            model=model,
+            evaluate_device=evaluate_device,
+        )
+
+    elif task_name == 'voicebank-musdb18':
+        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
+        return get_violin_piano_callbacks(
+            config_yaml=config_yaml,
+            dataset_dir=dataset_dir,
+            workspace=workspace,
+            checkpoints_dir=checkpoints_dir,
+            statistics_path=statistics_path,
+            logger=logger,
+            model=model,
+            evaluate_device=evaluate_device,
+        )
+
+    elif task_name == 'vctk-musdb18':
+        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
+        return get_violin_piano_callbacks(
+            config_yaml=config_yaml,
+            dataset_dir=dataset_dir,
+            workspace=workspace,
+            checkpoints_dir=checkpoints_dir,
+            statistics_path=statistics_path,
+            logger=logger,
+            model=model,
+            evaluate_device=evaluate_device,
+        )
+
     else:
         raise NotImplementedError
