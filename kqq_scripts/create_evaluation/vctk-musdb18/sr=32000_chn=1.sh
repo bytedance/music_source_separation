@@ -1,4 +1,8 @@
 #!/bin/bash
+<<<<<<< HEAD
+=======
+WORKSPACE=${1:-"./workspaces/bytesep"}  # Default workspace directory 
+>>>>>>> cfa2546043fe5233fe35ab0e7ff9653ef4e8eff6
 VCTK_DATASET_DIR="/home/tiger/datasets/vctk"
 MUSDB18_DATASET_DIR="/home/tiger/my_code_2019.12-/python/music_source_separation/datasets/musdb18"
 

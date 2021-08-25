@@ -112,11 +112,16 @@ class SegmentSampler:
                         source_meta = self.meta_dict[source_type][index]
                         # E.g., ['song_A.h5', 198450, 330750]
 
-                        hdf5_name, key, bgn_sample, _ = source_meta
-                        end_sample = bgn_sample + self.segment_samples
-                        new_source_meta = [hdf5_name, key, bgn_sample, end_sample]
+                        # hdf5_name, key, bgn_sample, _ = source_meta
 
-                        source_metas.append(new_source_meta)
+                        # hdf5_path = source_meta['hdf5_path']
+                        # key = source_meta['key']
+                        # bgn_sample = source_meta['begin_sample']
+                        # end_sample = bgn_sample + self.segment_samples
+                        # new_source_meta = [hdf5_path, key, bgn_sample, end_sample]
+
+                        # source_metas.append(new_source_meta)
+                        source_metas.append(source_meta)
 
                     batch_meta_dict[source_type].append(source_metas)
             # batch_meta_dict looks like: {
