@@ -102,13 +102,24 @@ class Dataset:
             for m in meta[source_type]:
                 # E.g., ['.../song_A.h5', 3995460, 4127760]
 
-                [hdf5_path, key, start_sample, end_sample] = m
+                # [hdf5_path, key, start_sample, end_sample] = m
+
+                hdf5_path = m['hdf5_path']
+                key = m['key']
+                bgn_sample = m['begin_sample']
+                end_sample = m['end_sample']
 
                 with h5py.File(hdf5_path, 'r') as hf:
 
-                    waveform = int16_to_float32(
-                        hf[key][:, start_sample:end_sample]
-                    )
+                    if source_type == 'audioset':
+                        
+                        index_in_hdf5 = m['index_in_hdf5']
+                        waveform = int16_to_float32(hf['waveform'][index_in_hdf5][bgn_sample:end_sample])
+                        waveform = waveform[None, :]
+                    else:
+                        waveform = int16_to_float32(
+                            hf[key][:, bgn_sample:end_sample]
+                        )
 
                     if self.augmentor:
                         waveform = self.augmentor(waveform)

@@ -1,0 +1,17 @@
+---
+sample_rate: 32000
+segment_seconds: 3.0
+train:
+    source_types:
+        speech:
+            vctk:
+                directory: "hdf5s/vctk/sr=32000_ch=1/train"
+                hop_seconds: 1.
+                key: "speech"
+        audioset:
+            # audioset:
+            indexes_hdf5_path: "/home/tiger/workspaces/audioset_tagging/hdf5s/indexes/balanced_train.h5"
+                # directory: "hdf5s/musdb18/sr=44100_ch=2/train/full_train"
+                # hop_seconds: 0.1
+                # key: "mixture"
+    indexes: "indexes/vctk-audioset/sr=32000_ch=1/train/vctk-audioset_balanced.pkl"

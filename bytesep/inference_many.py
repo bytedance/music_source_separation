@@ -33,6 +33,7 @@ def inference(args):
     target_source_types = configs['train']['target_source_types']
     target_sources_num = len(target_source_types)
     model_type = configs['train']['model_type']
+    mono = input_channels == 1
 
     segment_samples = int(30 * sample_rate)
     batch_size = 1
@@ -63,9 +64,10 @@ def inference(args):
         audio_path = os.path.join(audios_dir, audio_name)
 
         # Load audio.
-        audio, _ = librosa.load(audio_path, sr=sample_rate, mono=False)
+        audio, _ = librosa.load(audio_path, sr=sample_rate, mono=mono)
 
-        # audio = audio[None, :]
+        if audio.ndim == 1:
+            audio = audio[None, :]
 
         input_dict = {'waveform': audio}
 
