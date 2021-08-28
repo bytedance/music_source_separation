@@ -19,38 +19,42 @@ TODO
 We use the MUSDB18 dataset to train music source separation systems. The trained system can be used to separate vocals, accompaniments, bass, and other sources. Execute the following script to download and decompress the MUSDB18 dataset:
 
 ```bash
-./scripts/musdb18/download_musdb18_from_zenodo.sh
+# ./scripts/musdb18/download_musdb18_from_zenodo.sh
+./scripts/download_datasets/musdb18.sh
 ```
 
 The dataset looks like:
 <pre>
 ./datasets/musdb18
 ├── train (100 files)
-│    ├── 'A Classic Education - NightOwl.stem.mp4'
-│    └── ...
+│   ├── 'A Classic Education - NightOwl.stem.mp4'
+│   └── ...
 ├── test (50 files)
-│    ├── 'Al James - Schoolboy Facination.stem.mp4'
-│    └── ...
+│   ├── 'Al James - Schoolboy Facination.stem.mp4'
+│   └── ...
 └── README.md
 </pre>
 
 ## 2. Pack audio files into hdf5 files
 
 We pack audio waveforms into hdf5 files to speed up training.
-
 ```bash
-./scripts/musdb18/pack_audios_to_hdf5s.sh
+./"scripts/pack_audios_to_hdf5s/musdb18/sr=44100_chn=2.sh"
 ```
 
 ## 3. Create indexes for training
-
 ```bash
-./scripts/musdb18/create_indexes.sh
+./scripts/create_indexes/musdb18/musdb18.sh
+```
+
+## 3. Create evaluation audios
+```bash
+./scripts/create_evaluation_audios/musdb18/musdb18.sh
 ```
 
 ## 4. Train & evaluate & save checkpoints
 ```bash
-./scripts/musdb18/train.sh
+./scripts/train/musdb18/train.sh
 ```
 
 ## 5. Inference

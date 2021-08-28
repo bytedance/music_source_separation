@@ -3,6 +3,7 @@ import logging
 import os
 import pickle
 
+import librosa
 import numpy as np
 import yaml
 
@@ -31,6 +32,24 @@ def create_logging(log_dir, filemode):
     logging.getLogger("").addHandler(console)
 
     return logging
+
+
+def load_audio(audio_path: str, mono: bool, sample_rate: float, offset: float = 0., duration: float = None) -> np.array:
+    r"""Load audio.
+
+    Args:
+        audio_path: str
+        mono: bool
+        sample_rate: float
+    """
+    audio, _ = librosa.core.load(audio_path, sr=sample_rate, mono=mono, offset=offset, duration=duration)
+    # (audio_samples,) | (channels_num, audio_samples)
+
+    if audio.ndim == 1:
+        audio = audio[None, :]
+        # (1, audio_samples,)
+
+    return audio
 
 
 def float32_to_int16(x):

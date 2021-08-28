@@ -3,16 +3,10 @@ from typing import List
 import pytorch_lightning as pl
 import torch.nn as nn
 
-from bytesep.callbacks.musdb18_callbacks import get_musdb18_callbacks
-from bytesep.callbacks.voicebank_demand_callbacks import (
-    get_voicebank_demand_callbacks,
-)
-
 
 def get_callbacks(
     task_name: str,
     config_yaml: str,
-    dataset_dir: str,
     workspace: str,
     checkpoints_dir: str,
     statistics_path: str,
@@ -36,9 +30,10 @@ def get_callbacks(
         callbacks: List[pl.Callback]
     """
     if task_name == 'musdb18':
+        from bytesep.callbacks.musdb18 import get_musdb18_callbacks
+
         return get_musdb18_callbacks(
             config_yaml=config_yaml,
-            dataset_dir=dataset_dir,
             workspace=workspace,
             checkpoints_dir=checkpoints_dir,
             statistics_path=statistics_path,
@@ -48,9 +43,22 @@ def get_callbacks(
         )
 
     elif task_name == 'voicebank-demand':
+        from bytesep.callbacks.voicebank_demand import get_voicebank_demand_callbacks
+        
         return get_voicebank_demand_callbacks(
             config_yaml=config_yaml,
-            dataset_dir=dataset_dir,
+            workspace=workspace,
+            checkpoints_dir=checkpoints_dir,
+            statistics_path=statistics_path,
+            logger=logger,
+            model=model,
+            evaluate_device=evaluate_device,
+        )
+
+    elif task_name == 'vctk-musdb18':
+        from bytesep.callbacks.simple_callbacks import get_simple_callbacks
+        return get_simple_callbacks(
+            config_yaml=config_yaml,
             workspace=workspace,
             checkpoints_dir=checkpoints_dir,
             statistics_path=statistics_path,
@@ -63,7 +71,6 @@ def get_callbacks(
         from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
         return get_violin_piano_callbacks(
             config_yaml=config_yaml,
-            dataset_dir=dataset_dir,
             workspace=workspace,
             checkpoints_dir=checkpoints_dir,
             statistics_path=statistics_path,
@@ -76,7 +83,6 @@ def get_callbacks(
         from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
         return get_violin_piano_callbacks(
             config_yaml=config_yaml,
-            dataset_dir=dataset_dir,
             workspace=workspace,
             checkpoints_dir=checkpoints_dir,
             statistics_path=statistics_path,
@@ -89,20 +95,6 @@ def get_callbacks(
         from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
         return get_violin_piano_callbacks(
             config_yaml=config_yaml,
-            dataset_dir=dataset_dir,
-            workspace=workspace,
-            checkpoints_dir=checkpoints_dir,
-            statistics_path=statistics_path,
-            logger=logger,
-            model=model,
-            evaluate_device=evaluate_device,
-        )
-
-    elif task_name == 'vctk-musdb18':
-        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
-        return get_violin_piano_callbacks(
-            config_yaml=config_yaml,
-            dataset_dir=dataset_dir,
             workspace=workspace,
             checkpoints_dir=checkpoints_dir,
             statistics_path=statistics_path,
@@ -115,7 +107,6 @@ def get_callbacks(
         from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
         return get_violin_piano_callbacks(
             config_yaml=config_yaml,
-            dataset_dir=dataset_dir,
             workspace=workspace,
             checkpoints_dir=checkpoints_dir,
             statistics_path=statistics_path,
