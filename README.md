@@ -36,7 +36,7 @@ The dataset looks like:
 
 We pack audio waveforms into hdf5 files to speed up training.
 ```bash
-./"scripts/pack_audios_to_hdf5s/musdb18/sr=44100_chn=2.sh"
+./"scripts/pack_audios_to_hdf5s/musdb18/sr=44100,chn=2.sh"
 ```
 
 ## 3. Create indexes for training
