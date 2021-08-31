@@ -1,0 +1,16 @@
+---
+sample_rate: 44100
+segment_seconds: 3.0
+train:
+    source_types:
+        speech:
+            vctk:
+                hdf5s_directory: "hdf5s/vctk/sr=44100_chn=2/train"
+                key_in_hdf5: "speech"
+                hop_seconds: 0.1
+        music:
+            musdb18:
+                hdf5s_directory: "hdf5s/musdb18/sr=44100_chn=2/train/full_train"
+                key_in_hdf5: "mixture"
+                hop_seconds: 0.1
+    indexes: "indexes/vctk-musdb18/sr=44100_chn=2/train/speech-music.pkl"
