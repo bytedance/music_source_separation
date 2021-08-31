@@ -4,7 +4,7 @@ WORKSPACE=${1:-"./workspaces/bytesep"}  # The first argument is workspace direct
 echo "WORKSPACE=${WORKSPACE}"
 
 # Users can modify the following config file.
-TRAIN_CONFIG_YAML="scripts/train/musdb18/configs/vocals-accompaniment,unet"
+TRAIN_CONFIG_YAML="scripts/4_train/musdb18/configs/vocals-accompaniment,unet.yaml"
 
 # Train & evaluate & save checkpoints.
 CUDA_VISIBLE_DEVICES=0 python3 bytesep/train.py train \

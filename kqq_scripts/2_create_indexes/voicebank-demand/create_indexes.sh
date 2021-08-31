@@ -4,7 +4,7 @@ WORKSPACE=${1:-"./workspaces/bytesep"}  # Default workspace directory
 echo "WORKSPACE=${WORKSPACE}"
 
 # Users can modify the following config file.
-INDEXES_CONFIG_YAML="scripts/create_indexes/voicebank-demand/configs/voicebank-demand,sr=44100,chn=1.yaml"
+INDEXES_CONFIG_YAML="scripts/2_create_indexes/voicebank-demand/configs/voicebank-demand,sr=44100,chn=1.yaml"
 
 # Create indexes for training.
 python3 bytesep/dataset_creation/create_indexes/create_indexes.py \

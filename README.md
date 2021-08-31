@@ -8,7 +8,9 @@ Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
 
 ## Installation
 
-TODO
+```bash
+pip install -r requirements.txt
+```
 
 ## Train a music source separation system from scratch
 
@@ -17,7 +19,7 @@ TODO
 We use the MUSDB18 dataset to train music source separation systems. The trained system can be used to separate vocals, accompaniments, bass, and other sources. Execute the following script to download and decompress the MUSDB18 dataset:
 
 ```bash
-./scripts/download_datasets/musdb18.sh
+./scripts/0_download_datasets/musdb18.sh
 ```
 
 The dataset looks like:
@@ -36,22 +38,22 @@ The dataset looks like:
 
 We pack audio waveforms into hdf5 files to speed up training.
 ```bash
-./"scripts/pack_audios_to_hdf5s/musdb18/sr=44100,chn=2.sh"
+."/scripts/1_pack_audios_to_hdf5s/musdb18/sr=44100,chn=2.sh"
 ```
 
 ## 3. Create indexes for training
 ```bash
-./scripts/create_indexes/musdb18/create_indexes.sh
+./scripts/2_create_indexes/musdb18/create_indexes.sh
 ```
 
 ## 3. Create evaluation audios
 ```bash
-./scripts/create_evaluation_audios/musdb18/create_evaluation_audios.sh
+./scripts/3_create_evaluation_audios/musdb18/create_evaluation_audios.sh
 ```
 
 ## 4. Train & evaluate & save checkpoints
 ```bash
-./scripts/train/musdb18/train.sh
+./scripts/4_train/musdb18/train.sh
 ```
 
 ## 5. Inference
