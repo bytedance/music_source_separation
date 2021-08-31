@@ -55,57 +55,9 @@ def get_callbacks(
             evaluate_device=evaluate_device,
         )
 
-    elif task_name == 'vctk-musdb18':
-        from bytesep.callbacks.simple_callbacks import get_simple_callbacks
-        return get_simple_callbacks(
-            config_yaml=config_yaml,
-            workspace=workspace,
-            checkpoints_dir=checkpoints_dir,
-            statistics_path=statistics_path,
-            logger=logger,
-            model=model,
-            evaluate_device=evaluate_device,
-        )
-
-    elif task_name == 'violin-piano':
-        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
-        return get_violin_piano_callbacks(
-            config_yaml=config_yaml,
-            workspace=workspace,
-            checkpoints_dir=checkpoints_dir,
-            statistics_path=statistics_path,
-            logger=logger,
-            model=model,
-            evaluate_device=evaluate_device,
-        )
-
-    elif task_name == 'piano-symphony':
-        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
-        return get_violin_piano_callbacks(
-            config_yaml=config_yaml,
-            workspace=workspace,
-            checkpoints_dir=checkpoints_dir,
-            statistics_path=statistics_path,
-            logger=logger,
-            model=model,
-            evaluate_device=evaluate_device,
-        )
-
-    elif task_name == 'voicebank-musdb18':
-        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
-        return get_violin_piano_callbacks(
-            config_yaml=config_yaml,
-            workspace=workspace,
-            checkpoints_dir=checkpoints_dir,
-            statistics_path=statistics_path,
-            logger=logger,
-            model=model,
-            evaluate_device=evaluate_device,
-        )
-
-    elif task_name == 'vctk-audioset':
-        from bytesep.callbacks.violin_piano_callbacks import get_violin_piano_callbacks
-        return get_violin_piano_callbacks(
+    elif task_name in ['vctk-musdb18', 'violin-piano', 'piano-symphony']:
+        from bytesep.callbacks.instruments_callbacks import get_instruments_callbacks
+        return get_instruments_callbacks(
             config_yaml=config_yaml,
             workspace=workspace,
             checkpoints_dir=checkpoints_dir,

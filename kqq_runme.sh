@@ -28,3 +28,10 @@ CUDA_VISIBLE_DEVICES=4 python3 bytesep/inference_many.py \
     --checkpoint_path="/home/tiger/my_code_2019.12-/python/music_source_separation/workspaces/bytesep/checkpoints/voicebank-musdb18/train/config=01,gpus=1/step=30000.pth" \
     --audios_dir='resources/音频物料 - 人声+bgm的内容_mp3s' \
     --output_dir='sep_results/音频物料 - 人声+bgm的内容_mp3s_b'
+
+
+CUDA_VISIBLE_DEVICES=3 python3 bytesep/inference.py \
+    --config_yaml="kqq_scripts/train/musdb18/configs/accompaniment-vocals_unet.yaml" \
+    --checkpoint_path="workspaces/bytesep/checkpoints/musdb18/train/config=accompaniment-vocals_unet,gpus=1/step=50000.pth" \
+    --audio_path='resources/vocals_accompaniment_10s.mp3' \
+    --output_path='sep_results/vocals_accompaniment_10s.mp3'

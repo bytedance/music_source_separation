@@ -4,7 +4,7 @@ WORKSPACE=${1:-"./workspaces/bytesep"}  # Default workspace directory
 echo "WORKSPACE=${WORKSPACE}"
 
 # Users can modify the following config file.
-INDEXES_CONFIG_YAML="scripts/create_indexes/vctk-musdb18/configs/speech-accompaniment_sr=44100_chn=2.yaml"
+INDEXES_CONFIG_YAML="scripts/create_indexes/violin-piano/configs/violin-piano_sr=44100_chn=2.yaml"
 
 # Create indexes for training.
 python3 bytesep/dataset_creation/create_indexes/create_indexes.py \

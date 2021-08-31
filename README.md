@@ -1,12 +1,10 @@
-# Music source separation
+# Music Source Separation
 
-Music source separation is a task to separate audio recordings into individual sources. This repository is an PyTorch implmementation of music source separation systems. Users can separate their favorite songs into different sources by installing this repository. Users can also train music source separation systems from scratch using this repository.
-
-This repository can be also used for music source separation, speech enhancement, instruments separation, etc.
+Music source separation is a task to separate audio recordings into individual sources. This repository is an PyTorch implmementation of music source separation. Users can separate their favorite songs into different sources by installing this repository. In addition, users can train their own music source separation systems using this repository. This repository also includes speech enhancement, instruments separation, etc.
 
 ## Demos
 
-TODO
+Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
 
 ## Installation
 
@@ -19,7 +17,6 @@ TODO
 We use the MUSDB18 dataset to train music source separation systems. The trained system can be used to separate vocals, accompaniments, bass, and other sources. Execute the following script to download and decompress the MUSDB18 dataset:
 
 ```bash
-# ./scripts/musdb18/download_musdb18_from_zenodo.sh
 ./scripts/download_datasets/musdb18.sh
 ```
 
@@ -44,12 +41,12 @@ We pack audio waveforms into hdf5 files to speed up training.
 
 ## 3. Create indexes for training
 ```bash
-./scripts/create_indexes/musdb18/musdb18.sh
+./scripts/create_indexes/musdb18/create_indexes.sh
 ```
 
 ## 3. Create evaluation audios
 ```bash
-./scripts/create_evaluation_audios/musdb18/musdb18.sh
+./scripts/create_evaluation_audios/musdb18/create_evaluation_audios.sh
 ```
 
 ## 4. Train & evaluate & save checkpoints

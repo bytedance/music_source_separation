@@ -17,178 +17,13 @@ from bytesep.models.pytorch_modules import (
     init_bn,
     init_layer,
     act,
-    Subband,
 )
-
-
-class ConvBlock(nn.Module):
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: Tuple,
-        activation: str,
-        momentum: float,
-    ):
-        r"""Convolutional block."""
-        super(ConvBlock, self).__init__()
-
-        self.activation = activation
-        padding = (kernel_size[0] // 2, kernel_size[1] // 2)
-
-        self.conv1 = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=kernel_size,
-            stride=(1, 1),
-            dilation=(1, 1),
-            padding=padding,
-            bias=False,
-        )
-
-        self.bn1 = nn.BatchNorm2d(out_channels, momentum=momentum)
-
-        self.conv2 = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
-            kernel_size=kernel_size,
-            stride=(1, 1),
-            dilation=(1, 1),
-            padding=padding,
-            bias=False,
-        )
-
-        self.bn2 = nn.BatchNorm2d(out_channels, momentum=momentum)
-
-        self.init_weights()
-
-    def init_weights(self) -> NoReturn:
-        r"""Initialize weights."""
-        init_layer(self.conv1)
-        init_layer(self.conv2)
-        init_bn(self.bn1)
-        init_bn(self.bn2)
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        r"""Forward data into the module.
-
-        Args:
-            input_tensor: (batch_size, in_feature_maps, time_steps, freq_bins)
-
-        Returns:
-            output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
-        """
-        x = act(self.bn1(self.conv1(input_tensor)), self.activation)
-        x = act(self.bn2(self.conv2(x)), self.activation)
-        output_tensor = x
-
-        return output_tensor
-
-
-class EncoderBlock(nn.Module):
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: Tuple,
-        downsample: Tuple,
-        activation: str,
-        momentum: float,
-    ):
-        r"""Encoder block."""
-        super(EncoderBlock, self).__init__()
-
-        self.conv_block = ConvBlock(
-            in_channels, out_channels, kernel_size, activation, momentum
-        )
-        self.downsample = downsample
-
-    def forward(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        r"""Forward data into the module.
-
-        Args:
-            input_tensor: (batch_size, in_feature_maps, time_steps, freq_bins)
-
-        Returns:
-            encoder_pool: (batch_size, out_feature_maps, downsampled_time_steps, downsampled_freq_bins)
-            encoder: (batch_size, out_feature_maps, time_steps, freq_bins)
-        """
-        encoder_tensor = self.conv_block(input_tensor)
-        # encoder: (batch_size, out_feature_maps, time_steps, freq_bins)
-
-        encoder_pool = F.avg_pool2d(encoder_tensor, kernel_size=self.downsample)
-        # encoder_pool: (batch_size, out_feature_maps, downsampled_time_steps, downsampled_freq_bins)
-
-        return encoder_pool, encoder_tensor
-
-
-class DecoderBlock(nn.Module):
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: Tuple,
-        upsample: Tuple,
-        activation: str,
-        momentum: float,
-    ):
-        r"""Decoder block."""
-        super(DecoderBlock, self).__init__()
-
-        self.kernel_size = kernel_size
-        self.stride = upsample
-        self.activation = activation
-
-        self.conv1 = torch.nn.ConvTranspose2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=self.stride,
-            stride=self.stride,
-            padding=(0, 0),
-            bias=False,
-            dilation=(1, 1),
-        )
-
-        self.bn1 = nn.BatchNorm2d(out_channels, momentum=momentum)
-
-        self.conv_block2 = ConvBlock(
-            out_channels * 2, out_channels, kernel_size, activation, momentum
-        )
-
-        self.init_weights()
-
-    def init_weights(self):
-        r"""Initialize weights."""
-        init_layer(self.conv1)
-        init_bn(self.bn1)
-
-    def forward(
-        self, input_tensor: torch.Tensor, concat_tensor: torch.Tensor
-    ) -> torch.Tensor:
-        r"""Forward data into the module.
-
-        Args:
-            torch_tensor: (batch_size, in_feature_maps, downsampled_time_steps, downsampled_freq_bins)
-            concat_tensor: (batch_size, in_feature_maps, time_steps, freq_bins)
-
-        Returns:
-            output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
-        """
-        x = act(self.bn1(self.conv1(input_tensor)), self.activation)
-        # (batch_size, in_feature_maps, time_steps, freq_bins)
-
-        x = torch.cat((x, concat_tensor), dim=1)
-        # (batch_size, in_feature_maps * 2, time_steps, freq_bins)
-
-        output_tensor = self.conv_block2(x)
-        # output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
-
-        return output_tensor
+from bytesep.models.unet import ConvBlock, EncoderBlock, DecoderBlock
 
 
 class UNetSubbandTime(nn.Module, Base):
     def __init__(self, input_channels: int, target_sources_num: int):
-        r"""UNet."""
+        r"""Subband waveform UNet."""
         super(UNetSubbandTime, self).__init__()
 
         self.input_channels = input_channels
@@ -199,8 +34,7 @@ class UNetSubbandTime(nn.Module, Base):
         center = True
         pad_mode = "reflect"
         window = "hann"
-        activation = "relu"
-        # activation = "leaky_relu"
+        activation = "leaky_relu"
         momentum = 0.01
 
         self.subbands_num = 4
@@ -349,16 +183,15 @@ class UNetSubbandTime(nn.Module, Base):
 
         self.after_conv2 = nn.Conv2d(
             in_channels=32,
-            out_channels=input_channels
-            * self.subbands_num
-            * target_sources_num
-            * self.K,
+            out_channels=target_sources_num
+            * input_channels
+            * self.K
+            * self.subbands_num,
             kernel_size=(1, 1),
             stride=(1, 1),
             padding=(0, 0),
             bias=True,
         )
-        
         
         self.init_weights()
 
@@ -378,10 +211,10 @@ class UNetSubbandTime(nn.Module, Base):
         r"""Convert feature maps to waveform.
 
         Args:
-            input_tensor: (batch_size, feature_maps, time_steps, freq_bins)
-            sp: (batch_size, feature_maps, time_steps, freq_bins)
-            sin_in: (batch_size, feature_maps, time_steps, freq_bins)
-            cos_in: (batch_size, feature_maps, time_steps, freq_bins)
+            input_tensor: (batch_size, target_sources_num * input_channels * self.K, time_steps, freq_bins)
+            sp: (batch_size, target_sources_num * input_channels, time_steps, freq_bins)
+            sin_in: (batch_size, target_sources_num * input_channels, time_steps, freq_bins)
+            cos_in: (batch_size, target_sources_num * input_channels, time_steps, freq_bins)
 
         Outputs:
             waveform: (batch_size, target_sources_num * input_channels, segment_samples)
@@ -465,16 +298,17 @@ class UNetSubbandTime(nn.Module, Base):
         mixtures = input_dict['waveform']
         # (batch_size, input_channels, segment_samples)
 
-        x0 = self.pqmf.analysis(mixtures)
+        subband_x = self.pqmf.analysis(mixtures)
+        # subband_x: (batch_size, input_channels * subbands_num, segment_samples)
 
-        mag, cos_in, sin_in = self.wav_to_spectrogram_phase(x0)
-        # mag, cos_in, sin_in: (batch_size, input_channels, time_steps, freq_bins)
+        mag, cos_in, sin_in = self.wav_to_spectrogram_phase(subband_x)
+        # mag, cos_in, sin_in: (batch_size, input_channels * subbands_num, time_steps, freq_bins)
 
         # Batch normalize on individual frequency bins.
         x = mag.transpose(1, 3)
         x = self.bn0(x)
         x = x.transpose(1, 3)
-        """(batch_size, input_channels, time_steps, freq_bins)"""
+        # (batch_size, input_channels * subbands_num, time_steps, freq_bins)
 
         # Pad spectrogram to be evenly divided by downsample ratio.
         origin_len = x.shape[2]
@@ -483,13 +317,11 @@ class UNetSubbandTime(nn.Module, Base):
             - origin_len
         )
         x = F.pad(x, pad=(0, 0, 0, pad_len))
-        """(batch_size, input_channels, padded_time_steps, freq_bins)"""
+        # x: (batch_size, input_channels * subbands_num, padded_time_steps, freq_bins)
 
-        # Let frequency bins be evenly divided by 2, e.g., 1025 -> 1024
+        # Let frequency bins be evenly divided by 2, e.g., 257 -> 256
         x = x[..., 0 : x.shape[-1] - 1]  # (bs, input_channels, T, F)
-
-        # x = self.subband.analysis(x)
-        # (bs, input_channels, T, F'), where F' = F // subbands_num
+        # x: (batch_size, input_channels * subbands_num, padded_time_steps, freq_bins)
 
         # UNet
         (x1_pool, x1) = self.encoder_block1(x)  # x1_pool: (bs, 32, T / 2, F' / 2)
@@ -516,23 +348,31 @@ class UNetSubbandTime(nn.Module, Base):
         x = self.after_conv_block1(x12)  # (bs, 32, T, F')
 
         x = self.after_conv2(x)
-        # (batch_size, input_channles * subbands_num * targets_num * k, T, F')
+        # (batch_size, target_sources_num * input_channles * self.K * subbands_num, T, F')
 
         # Recover shape
-        x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 1024 -> 1025.
-        x = x[:, :, 0:origin_len, :]  # (bs, feature_maps, time_steps, freq_bins)
+        x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 256 -> 257.
 
-        audio_length = x0.shape[2] 
+        x = x[:, :, 0:origin_len, :]
+        # (batch_size, target_sources_num * input_channles * self.K * subbands_num, T, F')
 
-        # (batch_size, input_channles * targets_num * K, T, F)
-        M1 = self.target_sources_num * self.input_channels * self.K
-        M2 = self.target_sources_num * self.input_channels
-        a1 = torch.cat([self.feature_maps_to_wav(x[:, j * M1 : (j + 1) * M1, :, :], mag[:, j * M2 : (j + 1) * M2, :, :], sin_in[:, j * M2 : (j + 1) * M2, :, :], cos_in[:, j * M2 : (j + 1) * M2, :, :], audio_length) for j in range(self.subbands_num)], dim=1)
+        audio_length = subband_x.shape[2] 
 
-        separated_audio = self.pqmf.synthesis(a1)
+        # Recover each subband spectrograms to subband waveforms. Then synthesis
+        # the subband waveforms to a waveform.
+        separated_subband_audio = torch.cat([
+            self.feature_maps_to_wav(
+                input_tensor=x[:, 0 :: self.subbands_num, :, :], 
+                sp=mag[:, 0 :: self.subbands_num, :, :], 
+                sin_in=sin_in[:, 0 :: self.subbands_num, :, :], 
+                cos_in=cos_in[:, 0 :: self.subbands_num, :, :], 
+                audio_length=audio_length
+            ) for j in range(self.subbands_num)
+        ], dim=1)
+        # (batch_size, input_channles * subbands_num, subband_segment_samples)
 
-        # separated_audio = self.feature_maps_to_wav(x, mag, sin_in, cos_in, audio_length)
-        # separated_audio: (batch_size, target_sources_num * input_channels, segments_num)
+        separated_audio = self.pqmf.synthesis(separated_subband_audio)
+        # (batch_size, input_channles, segment_samples)
 
         output_dict = {'waveform': separated_audio}
 

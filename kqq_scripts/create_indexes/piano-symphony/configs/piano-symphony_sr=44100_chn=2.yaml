@@ -1,0 +1,16 @@
+---
+sample_rate: 44100
+segment_seconds: 3.0
+train:
+    source_types:
+        piano:
+            maestro:
+                hdf5s_directory: "hdf5s/maestro/sr=44100_chn=2/train"
+                key_in_hdf5: "piano"
+                hop_seconds: 3.0
+        symphony:
+            instruments_solo:
+                hdf5s_directory: "hdf5s/instruments_solo/symphony/sr=44100_chn=2/train"
+                key_in_hdf5: "symphony"
+                hop_seconds: 0.1
+    indexes: "indexes/piano-symphony/sr=44100_chn=2/train/piano-symphony.pkl"

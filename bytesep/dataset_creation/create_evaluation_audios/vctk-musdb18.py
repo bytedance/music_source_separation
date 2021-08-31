@@ -34,9 +34,8 @@ def create_evaluation(args):
     channels = args.channels
     evaluation_segments_num = args.evaluation_segments_num
     mono = True if channels == 1 else False
-
+    
     split = 'test'
-    evaluation_segments_num = 100
 
     random_state = np.random.RandomState(1234)
 

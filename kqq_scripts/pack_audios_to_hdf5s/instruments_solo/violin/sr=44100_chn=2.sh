@@ -14,7 +14,7 @@ INSTRUMENT="violin"
 # Paths
 SUB_DATASET_DIR="${DATASET_DIR}/${INSTRUMENT}_solo/v0.1"
 
-HDF5S_DIR="${WORKSPACE}/hdf5s/${INSTRUMENT}_solo/sr=${SAMPLE_RATE}_chn=${CHANNELS}/train"
+HDF5S_DIR="${WORKSPACE}/hdf5s/instruments_solo/${INSTRUMENT}/sr=${SAMPLE_RATE}_chn=${CHANNELS}/train"
 
 python3 bytesep/dataset_creation/pack_audios_to_hdf5s/instruments_solo.py \
     --dataset_dir=$SUB_DATASET_DIR \
