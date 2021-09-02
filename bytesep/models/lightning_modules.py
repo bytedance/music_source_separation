@@ -126,6 +126,10 @@ def get_model_class(model_type):
         from bytesep.models.unet_subbandtime import UNetSubbandTime
         return UNetSubbandTime
 
+    elif model_type == 'UNetSubbandTime2':
+        from bytesep.models.unet_subbandtime2 import UNetSubbandTime2
+        return UNetSubbandTime2
+
     elif model_type == 'ResUNet143_Subbandtime':
         from bytesep.models.resunet_subbandtime import ResUNet143_Subbandtime
         return ResUNet143_Subbandtime
