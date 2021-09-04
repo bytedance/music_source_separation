@@ -37,18 +37,24 @@ def plot_statistics(args):
     linewidth = 1
     lines = []
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-    ylim = 20
-    expand = 1
 
     if select == '1a':
-        sdrs = load_sdrs(workspace, task_name, filename, config='unet', gpus=1, source_type="vocals")
+        sdrs = load_sdrs(workspace, task_name, filename, config='vocals-accompaniment,unet', gpus=1, source_type="vocals")
         line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
         lines.append(line)
+        ylim = 15
 
-    if select == '1b':
-        sdrs = load_sdrs(workspace, task_name, filename, config='accompaniment-vocals_unet', gpus=1, source_type="accompaniment")
+    elif select == '1b':
+        sdrs = load_sdrs(workspace, task_name, filename, config='accompaniment-vocals,unet', gpus=1, source_type="accompaniment")
         line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
         lines.append(line)
+        ylim = 20
+
+    if select == '1c':
+        sdrs = load_sdrs(workspace, task_name, filename, config='vocals-accompaniment,resunet', gpus=2, source_type="vocals")
+        line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
+        lines.append(line)
+        ylim = 15
 
     else:
         raise Exception('Error!')
