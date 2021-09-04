@@ -122,13 +122,14 @@ def _get_data_module(
     segment_seconds = configs['train']['segment_seconds']
     mixaudio_dict = configs['train']['mixaudio']
     augmentation = configs['train']['augmentation']
-    pitch_shift = augmentation['pitch_shift']
+    # max_pitch_shift = augmentation['pitch_shift']
     batch_size = configs['train']['batch_size']
     steps_per_epoch = configs['train']['steps_per_epoch']
     mini_data = configs['train']['mini_data']
 
     segment_samples = int(segment_seconds * sample_rate)
-    ex_segment_samples = int(segment_samples * get_pitch_shift_factor(pitch_shift))
+    # ex_segment_samples = int(segment_samples * get_pitch_shift_factor(pitch_shift))
+    ex_segment_samples = segment_samples
 
     # sampler
     train_sampler = SegmentSampler(
@@ -226,7 +227,7 @@ def train(args) -> None:
         model=model,
         evaluate_device=evaluate_device,
     )
-    # callbacks = []
+    callbacks = []
 
     # learning rate reduce function
     lr_lambda = partial(

@@ -119,7 +119,7 @@ class Dataset:
                         )
 
                     if self.augmentor:
-                        waveform = self.augmentor(waveform)
+                        waveform = self.augmentor(waveform, source_type)
 
                     waveform = librosa.util.fix_length(
                         waveform, size=self.segment_samples, axis=1

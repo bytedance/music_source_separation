@@ -300,7 +300,8 @@ class UNetSubbandTime(nn.Module, Base):
 
         if self.subbands_num > 1:
             subband_x = self.pqmf.analysis(mixtures)
-            # subband_x: (batch_size, input_channels * subbands_num, segment_samples)
+            #-- subband_x: (batch_size, input_channels * subbands_num, segment_samples)
+            #-- subband_x: (batch_size, subbands_num * input_channels, segment_samples)
         else:
             subband_x = mixtures
 
@@ -355,32 +356,35 @@ class UNetSubbandTime(nn.Module, Base):
         x = self.after_conv_block1(x12)  # (bs, 32, T, F')
 
         x = self.after_conv2(x)
-        # (batch_size, target_sources_num * input_channles * self.K * subbands_num, T, F')
+        # (batch_size, subbands_num * target_sources_num * input_channles * self.K, T, F')
 
         # Recover shape
         x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 256 -> 257.
 
         x = x[:, :, 0:origin_len, :]
-        # (batch_size, target_sources_num * input_channles * self.K * subbands_num, T, F')
+        # (batch_size, subbands_num * target_sources_num * input_channles * self.K, T, F')
 
         audio_length = subband_x.shape[2] 
 
         # Recover each subband spectrograms to subband waveforms. Then synthesis
         # the subband waveforms to a waveform.
+        C1 = x.shape[1] // self.subbands_num
+        C2 = mag.shape[1] // self.subbands_num
+        
         separated_subband_audio = torch.cat([
             self.feature_maps_to_wav(
-                input_tensor=x[:, j :: self.subbands_num, :, :], 
-                sp=mag[:, j :: self.subbands_num, :, :], 
-                sin_in=sin_in[:, j :: self.subbands_num, :, :], 
-                cos_in=cos_in[:, j :: self.subbands_num, :, :], 
+                input_tensor=x[:, j * C1 : (j + 1) * C1, :, :], 
+                sp=mag[:, j * C2 : (j + 1) * C2, :, :], 
+                sin_in=sin_in[:, j * C2 : (j + 1) * C2, :, :], 
+                cos_in=cos_in[:, j * C2 : (j + 1) * C2, :, :], 
                 audio_length=audio_length
             ) for j in range(self.subbands_num)
         ], dim=1)
-        # (batch_size, input_channles * subbands_num, subband_segment_samples)
+        # （batch_size, subbands_num * target_sources_num * input_channles, segment_samples)
 
         if self.subbands_num > 1:
             separated_audio = self.pqmf.synthesis(separated_subband_audio)
-            # (batch_size, input_channles, segment_samples)
+            # (batch_size, target_sources_num * input_channles, segment_samples)
         else:
             separated_audio = separated_subband_audio
 
