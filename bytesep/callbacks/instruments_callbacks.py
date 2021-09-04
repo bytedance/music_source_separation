@@ -85,7 +85,7 @@ def get_instruments_callbacks(
     )
 
     callbacks = [save_checkpoints_callback, evaluate_test_callback]
-    # callbacks = [save_checkpoints_callback]
+    callbacks = [save_checkpoints_callback]
 
     return callbacks
 

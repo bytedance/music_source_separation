@@ -57,7 +57,8 @@ class LitSourceSeparation(pl.LightningModule):
         # targets: e.g., (batch_size, channels_num, segment_samples)
 
         # from IPython import embed; embed(using=False); os._exit(0)
-        # soundfile.write(file='_zz.wav', data=input_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=32000)
+        # import soundfile
+        # soundfile.write(file='_zz.wav', data=input_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=44100)
         # soundfile.write(file='_zz2.wav', data=target_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=32000)
 
         # Forward.
@@ -125,6 +126,10 @@ def get_model_class(model_type):
     elif model_type == 'UNetSubbandTime':
         from bytesep.models.unet_subbandtime import UNetSubbandTime
         return UNetSubbandTime
+
+    elif model_type == 'UNetSubbandTime2':
+        from bytesep.models.unet_subbandtime2 import UNetSubbandTime2
+        return UNetSubbandTime2
 
     elif model_type == 'ResUNet143_Subbandtime':
         from bytesep.models.resunet_subbandtime import ResUNet143_Subbandtime
