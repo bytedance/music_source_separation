@@ -51,10 +51,34 @@ def plot_statistics(args):
         ylim = 20
 
     if select == '1c':
-        sdrs = load_sdrs(workspace, task_name, filename, config='vocals-accompaniment,resunet', gpus=2, source_type="vocals")
+        sdrs = load_sdrs(workspace, task_name, filename, config='vocals-accompaniment,unet', gpus=1, source_type="vocals")
         line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
         lines.append(line)
+
+        sdrs = load_sdrs(workspace, task_name, filename, config='vocals-accompaniment,resunet', gpus=2, source_type="vocals")
+        line, = ax.plot(sdrs, label='ResUNet,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+        sdrs = load_sdrs(workspace, task_name, filename, config='vocals-accompaniment,unet_subbandtime', gpus=1, source_type="vocals")
+        line, = ax.plot(sdrs, label='unet_subband,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+        sdrs = load_sdrs(workspace, task_name, filename, config='vocals-accompaniment,resunet_subbandtime', gpus=1, source_type="vocals")
+        line, = ax.plot(sdrs, label='resunet_subband,l1_wav', linewidth=linewidth)
+        lines.append(line)
+        
         ylim = 15
+
+    elif select == '1d':
+        sdrs = load_sdrs(workspace, task_name, filename, config='accompaniment-vocals,unet', gpus=1, source_type="accompaniment")
+        line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+        sdrs = load_sdrs(workspace, task_name, filename, config='accompaniment-vocals,resunet', gpus=2, source_type="accompaniment")
+        line, = ax.plot(sdrs, label='ResUNet,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+        ylim = 20
 
     else:
         raise Exception('Error!')
