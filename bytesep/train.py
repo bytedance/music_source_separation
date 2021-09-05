@@ -117,19 +117,19 @@ def _get_data_module(
     """
 
     configs = read_yaml(config_yaml)
+    input_source_types = configs['train']['input_source_types']
     indexes_path = os.path.join(workspace, configs['train']['indexes_dict'])
     sample_rate = configs['train']['sample_rate']
     segment_seconds = configs['train']['segment_seconds']
     mixaudio_dict = configs['train']['mixaudio']
     augmentation = configs['train']['augmentation']
-    # max_pitch_shift = augmentation['pitch_shift']
+    max_pitch_shift = max([augmentation['pitch_shift'][source_type] for source_type in input_source_types])
     batch_size = configs['train']['batch_size']
     steps_per_epoch = configs['train']['steps_per_epoch']
     mini_data = configs['train']['mini_data']
 
     segment_samples = int(segment_seconds * sample_rate)
-    # ex_segment_samples = int(segment_samples * get_pitch_shift_factor(pitch_shift))
-    ex_segment_samples = segment_samples
+    ex_segment_samples = int(segment_samples * get_pitch_shift_factor(max_pitch_shift))
 
     # sampler
     train_sampler = SegmentSampler(

@@ -56,9 +56,10 @@ class LitSourceSeparation(pl.LightningModule):
         # mixtures: (batch_size, channels_num, segment_samples)
         # targets: e.g., (batch_size, channels_num, segment_samples)
 
-        from IPython import embed; embed(using=False); os._exit(0)
-        soundfile.write(file='_zz.wav', data=input_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=32000)
-        soundfile.write(file='_zz2.wav', data=target_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=32000)
+        # from IPython import embed; embed(using=False); os._exit(0)
+        # import soundfile
+        # soundfile.write(file='_zz.wav', data=input_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=44100)
+        # soundfile.write(file='_zz2.wav', data=target_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=32000)
 
         # Forward.
         self.model.train()
