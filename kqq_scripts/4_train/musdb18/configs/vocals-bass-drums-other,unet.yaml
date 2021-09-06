@@ -42,6 +42,16 @@ train:
             other:
                 lower_db: 0
                 higher_db: 0
+        swap_channel:
+            vocals: False
+            bass: False
+            drums: False
+            other: False
+        flip_axis:
+            vocals: False
+            bass: False
+            drums: False
+            other: False
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3

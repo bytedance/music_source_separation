@@ -5,7 +5,7 @@ train:
         - vocals
         - accompaniment
     target_source_types: 
-        - vocals
+        - accompaniment
     indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment.pkl"
     sample_rate: 44100
     channels: 2
@@ -28,11 +28,11 @@ train:
                 lower_db: 0
                 higher_db: 0
         swap_channel:
-            vocals: False
-            accompaniment: False
+            vocals: True
+            accompaniment: True
         flip_axis:
-            vocals: False
-            accompaniment: False
+            vocals: True
+            accompaniment: True
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
