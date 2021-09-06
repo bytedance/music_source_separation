@@ -5,7 +5,7 @@ train:
         - speech
         - music
     target_source_types: 
-        - speech
+        - music
     indexes_dict: "indexes/vctk-musdb18/sr=44100_chn=2/train/speech-music.pkl"
     sample_rate: 44100
     channels: 2
@@ -17,10 +17,16 @@ train:
         speech: 1
         music: 1
     augmentation:
-        pitch_shift: 0
+        pitch_shift:
+            speech: 0
+            music: 0
         magnitude_scale:
-            lower_db: 0
-            higher_db: 0
+            speech:
+                lower_db: -10
+                higher_db: 10
+            music:
+                lower_db: -30
+                higher_db: 10
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3

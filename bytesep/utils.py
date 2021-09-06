@@ -72,14 +72,15 @@ def read_yaml(config_yaml):
 def check_configs_gramma(configs):
 
     input_source_types = configs['train']['input_source_types']
-    mixaudio_source_types = list(configs['train']['mixaudio'].keys())
+    
+    for augmentation_type in configs['train']['augmentations'].keys():
+        augmentation_dict = configs['train']['augmentations'][augmentation_type]
 
-    assert (
-        input_source_types == mixaudio_source_types
-    ), r"Check your config \
-        file! The keys in \
-        configs['train']['mixaudio'] must match the items in \
-        configs['train']['input_source_types']!"
+        for source_type in augmentation_dict.keys():
+            if source_type not in input_source_types:
+                error_msg = "The source type '{}'' in configs['train']['augmentations']['{}'] " \
+                    "must be one of input_source_types {}".format(source_type, augmentation_type, input_source_types)
+                raise Exception(error_msg)
 
 
 def mix_audio_from_same_source(data_dict, input_sources, mixaudio):

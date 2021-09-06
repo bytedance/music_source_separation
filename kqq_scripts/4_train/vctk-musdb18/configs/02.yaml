@@ -1,26 +1,32 @@
 ---
-task_name: piano-symphony
+task_name: vctk-musdb18
 train:
     input_source_types:
-        - piano
-        - symphony
+        - speech
+        - accompaniment
     target_source_types: 
-        - piano
-    indexes_dict: "indexes/piano-symphony/sr=44100_chn=2/train/piano-symphony.pkl"
+        - accompaniment
+    indexes_dict: "indexes/vctk-musdb18/sr=44100_chn=2/train/speech-accompaniment.pkl"
     sample_rate: 44100
     channels: 2
     segment_seconds: 3.0
-    model_type: UNet
+    model_type: ResUNet143_Subbandtime
     loss_type: l1_wav
     mini_data: False
     mixaudio:
-        piano: 1
-        symphony: 1
+        speech: 1
+        accompaniment: 1
     augmentation:
-        pitch_shift: 0
+        pitch_shift:
+            speech: 0
+            accompaniment: 0
         magnitude_scale:
-            lower_db: 0
-            higher_db: 0
+            speech:
+                lower_db: -10
+                higher_db: 10
+            accompaniment:
+                lower_db: -30
+                higher_db: 10
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
@@ -36,5 +42,5 @@ train:
     resume_checkpoint: ""
 
 evaluate:
+    segment_seconds: 30.0
     batch_size: 1
-    segment_seconds: 30.

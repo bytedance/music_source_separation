@@ -13,14 +13,20 @@ train:
     model_type: UNet
     loss_type: l1_wav
     mini_data: False
-    mixaudio:
-        vocals: 2
-        accompaniment: 2
-    augmentation:
-        pitch_shift: 0
+    augmentations:
+        mixaudio:
+            vocals: 2
+            accompaniment: 2
+        pitch_shift:
+            vocals: 0
+            accompaniment: 0
         magnitude_scale:
-            lower_db: 0
-            higher_db: 0
+            vocals:
+                lower_db: 0
+                higher_db: 0
+            accompaniment:
+                lower_db: 0
+                higher_db: 0
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3

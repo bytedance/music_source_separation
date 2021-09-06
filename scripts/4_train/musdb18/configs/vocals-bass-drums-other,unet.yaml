@@ -18,16 +18,30 @@ train:
     model_type: UNet
     loss_type: l1_wav
     mini_data: False
-    mixaudio:
-        vocals: 1
-        bass: 1
-        drums: 1
-        other: 1
-    augmentation:
-        pitch_shift: 0
+    augmentations:
+        mixaudio:
+            vocals: 1
+            bass: 1
+            drums: 1
+            other: 1
+        pitch_shift:
+            vocals: 0
+            bass: 0
+            drums: 0
+            other: 0
         magnitude_scale:
-            lower_db: 0
-            higher_db: 0
+            vocals:
+                lower_db: 0
+                higher_db: 0
+            bass:
+                lower_db: 0
+                higher_db: 0
+            drums:
+                lower_db: 0
+                higher_db: 0
+            other:
+                lower_db: 0
+                higher_db: 0
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3

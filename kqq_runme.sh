@@ -24,10 +24,16 @@ CUDA_VISIBLE_DEVICES=4 python3 bytesep/inference.py \
     --output_path='sep_results/rach_no2_30s.mp3'
 
 CUDA_VISIBLE_DEVICES=4 python3 bytesep/inference_many.py \
-    --config_yaml="/home/tiger/my_code_2019.12-/python/music_source_separation/kqq_scripts/train/voicebank-musdb18/configs/01.yaml" \
-    --checkpoint_path="/home/tiger/my_code_2019.12-/python/music_source_separation/workspaces/bytesep/checkpoints/voicebank-musdb18/train/config=01,gpus=1/step=30000.pth" \
+    --config_yaml="/home/tiger/my_code_2019.12-/python/music_source_separation/kqq_scripts/4_train/vctk-musdb18/configs/speech-accompaniment,unet.yaml" \
+    --checkpoint_path="/home/tiger/my_code_2019.12-/python/music_source_separation/workspaces/bytesep/checkpoints/vctk-musdb18/train/config=speech-accompaniment,unet,gpus=2/step=150000.pth" \
     --audios_dir='resources/音频物料 - 人声+bgm的内容_mp3s' \
-    --output_dir='sep_results/音频物料 - 人声+bgm的内容_mp3s_b'
+    --output_dir='sep_results/音频物料 - 人声+bgm的内容_mp3s_c1'
+
+CUDA_VISIBLE_DEVICES=5 python3 bytesep/inference_many.py \
+    --config_yaml="/home/tiger/my_code_2019.12-/python/music_source_separation/kqq_scripts/4_train/vctk-musdb18/configs/accompaniment-speech,unet.yaml" \
+    --checkpoint_path="/home/tiger/my_code_2019.12-/python/music_source_separation/workspaces/bytesep/checkpoints/vctk-musdb18/train/config=accompaniment-speech,unet,gpus=2/step=150000.pth" \
+    --audios_dir='resources/音频物料 - 人声+bgm的内容_mp3s' \
+    --output_dir='sep_results/音频物料 - 人声+bgm的内容_mp3s_c2'
 
 
 CUDA_VISIBLE_DEVICES=3 python3 bytesep/inference.py \

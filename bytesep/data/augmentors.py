@@ -121,18 +121,21 @@ class Augmentor:
 '''
 
 class Augmentor:
-    def __init__(self, augmentation: Dict, random_seed=1234):
+    def __init__(self, augmentations: Dict, random_seed=1234):
         r"""Augmentor for augment a waveform.
 
         Args:
-            augmentation: Dict, e.g, {
-                'pitch_shift': 4,
-                'magnitude_scale': {'lower_db': -20, 'higher_db': 20}
+            augmentations: Dict, e.g, {
+                'pitch_shift': {'vocals': 4, 'accompaniment': 2},
+                'magnitude_scale': {
+                    'vocals': {'lower_db': -20, 'higher_db': 20},
+                    'accompaniment': {'lower_db': -20, 'higher_db': 20}
+                }
                 ...,
             }
             random_seed: int
         """
-        self.augmentation = augmentation
+        self.augmentations = augmentations
         self.random_state = np.random.RandomState(random_seed)
 
     def __call__(self, waveform: np.array, source_type: str) -> np.array:
@@ -144,13 +147,11 @@ class Augmentor:
         Returns:
             new_waveform: (channels_num, new_audio_samples)
         """
-        if 'pitch_shift' in self.augmentation.keys():
+        if 'pitch_shift' in self.augmentations.keys():
             waveform = self.pitch_shift(waveform, source_type)
 
-        if 'magnitude_scale' in self.augmentation.keys():
+        if 'magnitude_scale' in self.augmentations.keys():
             waveform = self.magnitude_scale(waveform, source_type)
-
-        # from IPython import embed; embed(using=False); os._exit(0)
 
         return waveform
 
@@ -166,9 +167,9 @@ class Augmentor:
         """
 
         # maximum pitch shift in semitones
-        max_pitch_shift = self.augmentation['pitch_shift'][source_type]
+        max_pitch_shift = self.augmentations['pitch_shift'][source_type]
 
-        if max_pitch_shift == 0:  # No pitch shift augmentation.
+        if max_pitch_shift == 0:  # No pitch shift augmentations.
             return waveform
 
         # random pitch shift
@@ -209,8 +210,8 @@ class Augmentor:
         Returns:
             new_waveform: (channels_num, audio_samples)
         """
-        lower_db = self.augmentation['magnitude_scale'][source_type]['lower_db']
-        higher_db = self.augmentation['magnitude_scale'][source_type]['higher_db']
+        lower_db = self.augmentations['magnitude_scale'][source_type]['lower_db']
+        higher_db = self.augmentations['magnitude_scale'][source_type]['higher_db']
 
         if lower_db == 0 and higher_db == 0:  # No magnitude scale augmentation.
             return waveform
