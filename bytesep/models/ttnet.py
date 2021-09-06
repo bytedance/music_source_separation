@@ -6,11 +6,13 @@ import torch.nn.functional as F
 
 class TTnet(nn.Module):
     def __init__(self,
+        input_channels,
+        target_sources_num,
                  depth=6,
                  ):
         super(TTnet, self).__init__()
 
-        in_channels = 2
+        in_channels = input_channels
         channels = 64
         kernel_size = 4096
 
@@ -39,7 +41,7 @@ class TTnet(nn.Module):
             if index > 0:
                 out_channels = in_channels
             else:
-                out_channels = 2
+                out_channels = input_channels * target_sources_num
 
             # -----------------------------
             # decode += [nn.Conv1d(channels, 2 * channels, kernel_size=3, stride=1, padding=1), nn.GLU(dim=1)]
@@ -61,9 +63,12 @@ class TTnet(nn.Module):
 
 
     def forward(self,
-                audio_input=None,
-                audio_target=None,
+        input_dict
+                # audio_input=None,
+                # audio_target=None,
                 ):
+
+        audio_input = input_dict['waveform']
 
         # input shape: (1, 2, 442368)
         x = F.pad(audio_input, (0, 1368), "constant", 0)
@@ -83,7 +88,8 @@ class TTnet(nn.Module):
 
         logits = x[:, :, :441000]
 
-        output_dict = {'wav': logits}
+        # output_dict = {'wav': logits}
+        output_dict = {'waveform': logits}
 
         return output_dict
 

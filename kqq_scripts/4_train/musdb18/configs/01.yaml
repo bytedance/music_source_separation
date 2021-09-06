@@ -3,15 +3,10 @@ task_name: musdb18
 train:
     input_source_types:
         - vocals
-        - bass
-        - drums
-        - other
+        - accompaniment
     target_source_types: 
-        - vocals
-        - bass
-        - drums
-        - other
-    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-bass-drums-other.pkl"
+        - accompaniment
+    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment_10s.pkl"
     sample_rate: 44100
     channels: 2
     segment_seconds: 10.0
@@ -21,45 +16,31 @@ train:
     mini_data: False
     augmentations:
         mixaudio:
-            vocals: 1
-            bass: 1
-            drums: 1
-            other: 1
+            vocals: 2
+            accompaniment: 2
         pitch_shift:
             vocals: 0
-            bass: 0
-            drums: 0
-            other: 0
+            accompaniment: 0
         magnitude_scale:
             vocals:
                 lower_db: 0
                 higher_db: 0
-            bass:
-                lower_db: 0
-                higher_db: 0
-            drums:
-                lower_db: 0
-                higher_db: 0
-            other:
+            accompaniment:
                 lower_db: 0
                 higher_db: 0
         swap_channel:
             vocals: False
-            bass: False
-            drums: False
-            other: False
+            accompaniment: False
         flip_axis:
             vocals: False
-            bass: False
-            drums: False
-            other: False
+            accompaniment: False
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
     batch_size: 8
     precision: 32
     steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
-    evaluate_step_frequency: 20000     # Evaluate every #evaluate_step_frequency steps.
+    evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.
     save_step_frequency: 50000  # Save every #save_step_frequency steps.
     early_stop_steps: 500001
     warm_up_steps: 1000
@@ -68,5 +49,5 @@ train:
     resume_checkpoint: ""
 
 evaluate:
-    segment_seconds: 30.0
+    segment_seconds: 10.0
     batch_size: 1

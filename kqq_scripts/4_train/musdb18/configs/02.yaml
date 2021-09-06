@@ -11,7 +11,7 @@ train:
         - bass
         - drums
         - other
-    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-bass-drums-other.pkl"
+    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-bass-drums-other_10s.pkl"
     sample_rate: 44100
     channels: 2
     segment_seconds: 10.0
@@ -56,10 +56,10 @@ train:
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
-    batch_size: 8
+    batch_size: 4
     precision: 32
     steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
-    evaluate_step_frequency: 20000     # Evaluate every #evaluate_step_frequency steps.
+    evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.
     save_step_frequency: 50000  # Save every #save_step_frequency steps.
     early_stop_steps: 500001
     warm_up_steps: 1000
@@ -68,5 +68,5 @@ train:
     resume_checkpoint: ""
 
 evaluate:
-    segment_seconds: 30.0
+    segment_seconds: 10.0
     batch_size: 1

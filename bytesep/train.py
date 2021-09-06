@@ -180,6 +180,7 @@ def train(args) -> None:
     batch_data_preprocessor_type = configs['train']['batch_data_preprocessor']
     model_type = configs['train']['model_type']
     loss_type = configs['train']['loss_type']
+    optimizer_type = configs['train']['optimizer_type']
     learning_rate = float(configs['train']['learning_rate'])
     precision = configs['train']['precision']
     early_stop_steps = configs['train']['early_stop_steps']
@@ -238,6 +239,7 @@ def train(args) -> None:
     pl_model = LitSourceSeparation(
         batch_data_preprocessor=batch_data_preprocessor,
         model=model,
+        optimizer_type=optimizer_type,
         loss_function=loss_function,
         learning_rate=learning_rate,
         lr_lambda=lr_lambda,
