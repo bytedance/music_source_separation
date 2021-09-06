@@ -58,7 +58,7 @@ We pack audio waveforms into hdf5 files to speed up training.
 
 ## 5. Inference
 ```bash
-./scripts/musdb18/inference.sh
+./scripts/5_inference/musdb18/inference.sh
 ```
 
 ## Reference
