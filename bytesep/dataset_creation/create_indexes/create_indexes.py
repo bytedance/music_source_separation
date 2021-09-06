@@ -1,30 +1,31 @@
+from typing import NoReturn
 import argparse
 import os
 import pickle
 
 import h5py
 
-from music_source_separation.utils import read_yaml
+from bytesep.utils import read_yaml
 
 
-def create_indexes(args):
-    r"""Create and write out training indexes into disk. In training a source
-    separation system, training indexes will be shuffled and iterated for
-    selecting segments to be mixed. E.g., the training indexes_dict looks like:
-
-        {'vocals': [
-             [./piece1.h5, 0, 132300],
-             [./piece1.h5, 4410, 136710],
-             [./piece1.h5, 8820, 141120],
-             ...
-         ],
-         'accompaniment': [
-             [./piece1.h5, 0, 132300],
-             [./piece1.h5, 4410, 136710],
-             [./piece1.h5, 8820, 141120],
-             ...
-         ]
-        }
+def create_indexes(args) -> NoReturn:
+    r"""Create and write out training indexes into disk. The indexes may contain
+    information from multiple datasets. During training, training indexes will
+    be shuffled and iterated for selecting segments to be mixed. E.g., the
+    training indexes_dict looks like: {
+        'vocals': [
+            [./piece1.h5, 0, 132300],
+            [./piece1.h5, 4410, 136710],
+            [./piece1.h5, 8820, 141120],
+            ...
+        ],
+        'accompaniment': [
+            [./piece1.h5, 0, 132300],
+            [./piece1.h5, 4410, 136710],
+            [./piece1.h5, 8820, 141120],
+            ...
+        ]
+    }
     """
     # Arugments & parameters
     workspace = args.workspace
@@ -62,10 +63,9 @@ def create_indexes(args):
     #     ]
     # }
 
-    # tmp_dict = {source_type: {} for source_type in source_types}
-
     # Get training indexes for each source type.
     for source_type in source_types:
+        # E.g., ['vocals', 'bass', ...]
 
         print("--- {} ---".format(source_type))
 
@@ -76,11 +76,15 @@ def create_indexes(args):
         for dataset_type in dataset_types:
 
             hdf5s_dir = os.path.join(
-                workspace, dataset_types[dataset_type]["directory"]
+                workspace, dataset_types[dataset_type]["hdf5s_directory"]
             )
+
             hop_samples = int(dataset_types[dataset_type]["hop_seconds"] * sample_rate)
 
-            hdf5_names = os.listdir(hdf5s_dir)
+            key_in_hdf5 = dataset_types[dataset_type]["key_in_hdf5"]
+            # E.g., 'vocals'
+
+            hdf5_names = sorted(os.listdir(hdf5s_dir))
             print("Hdf5 files num: {}".format(len(hdf5_names)))
 
             # Traverse all packed hdf5 files of a dataset.
@@ -91,13 +95,28 @@ def create_indexes(args):
 
                 with h5py.File(hdf5_path, "r") as hf:
 
-                    start_sample = 0
-                    while start_sample + segment_samples < hf[source_type].shape[-1]:
-                        indexes_dict[source_type].append(
-                            [hdf5_path, start_sample, start_sample + segment_samples]
-                        )
+                    bgn_sample = 0
+                    while bgn_sample + segment_samples < hf[key_in_hdf5].shape[-1]:
+                        meta = {
+                            'hdf5_path': hdf5_path, 
+                            'key_in_hdf5': key_in_hdf5,
+                            'begin_sample': bgn_sample,
+                            'end_sample': bgn_sample + segment_samples,
+                        }
+                        indexes_dict[source_type].append(meta)
+                        
+                        bgn_sample += hop_samples
 
-                        start_sample += hop_samples
+                    # If the audio length is shorter than the segment length,
+                    # then use the entire audio as a segment.
+                    if bgn_sample == 0:
+                        meta = {
+                            'hdf5_path': hdf5_path, 
+                            'key_in_hdf5': key_in_hdf5,
+                            'begin_sample': 0,
+                            'end_sample': segment_samples,
+                        }
+                        indexes_dict[source_type].append(meta)
 
         print(
             "Total indexes for {}: {}".format(
@@ -111,22 +130,16 @@ def create_indexes(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest="mode")
 
-    # Create training indexes.
-    parser_create_indexes = subparsers.add_parser("create_indexes")
-    parser_create_indexes.add_argument(
+    parser.add_argument(
         "--workspace", type=str, required=True, help="Directory of workspace."
     )
-    parser_create_indexes.add_argument(
+    parser.add_argument(
         "--config_yaml", type=str, required=True, help="User defined config file."
     )
 
     # Parse arguments.
     args = parser.parse_args()
 
-    if args.mode == "create_indexes":
-        create_indexes(args)
-
-    else:
-        raise Exception("Incorrect arguments!")
+    # Create training indexes.
+    create_indexes(args)
