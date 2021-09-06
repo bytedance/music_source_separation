@@ -1,0 +1,46 @@
+---
+task_name: musdb18
+train:
+    input_source_types:
+        - vocals
+        - accompaniment
+    target_source_types: 
+        - vocals
+    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment.pkl"
+    sample_rate: 44100
+    channels: 2
+    segment_seconds: 3.0
+    model_type: UNet
+    loss_type: l1_wav
+    mini_data: False
+    augmentations:
+        mixaudio:
+            vocals: 2
+            accompaniment: 2
+        pitch_shift:
+            vocals: 0
+            accompaniment: 0
+        magnitude_scale:
+            vocals:
+                lower_db: 0
+                higher_db: 0
+            accompaniment:
+                lower_db: 0
+                higher_db: 0
+    batch_data_preprocessor: BasicBatchDataPreprocessor
+    evaluation_callback: Musdb18EvaluationCallback
+    learning_rate: 1e-3
+    batch_size: 16
+    precision: 32
+    steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
+    evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.
+    save_step_frequency: 50000  # Save every #save_step_frequency steps.
+    early_stop_steps: 500001
+    warm_up_steps: 1000
+    reduce_lr_steps: 15000
+    random_seed: 1234
+    resume_checkpoint: ""
+
+evaluate:
+    segment_seconds: 30.0
+    batch_size: 1

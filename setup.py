@@ -18,6 +18,9 @@ setup(
         'numpy==1.18.5',
         'torchlibrosa==0.0.9',
         'matplotlib==3.3.4',
+        'musdb==0.4.0',
+        'museval==0.4.0',
+        'inplace_abn==1.1.0'
     ],
     zip_safe=False
 )
