@@ -179,5 +179,9 @@ def get_model_class(model_type):
         from bytesep.models.ttnet import TTnet
         return TTnet
 
+    elif model_type == 'TTnetNoTransformer':
+        from bytesep.models.ttnet_no_transformer import TTnetNoTransformer
+        return TTnetNoTransformer
+
     else:
         raise NotImplementedError
