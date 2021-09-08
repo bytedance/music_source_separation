@@ -1,0 +1,6 @@
+01.yaml		UNet, acc-speech, l1_wav_l1_sp
+02.yaml		ResUNet143_Subbandtime, acc-speech
+03.yaml		UNet, music-speech, l1
+04.yaml		ResUNet143_Subbandtime, speech-music
+05.yaml		ResUNet143_Subbandtime, speech-accompaniment
+05b.yaml	ResUNet143_Subbandtime, speech-accompaniment

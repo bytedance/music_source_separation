@@ -1,0 +1,5 @@
+01.yaml		vocals, ttnet
+02.yaml		vocals-bass-drums-other, ttnet
+03.yaml		vocals-bass-drums-other, ttnet_no_transformer
+04.yaml		vocals-accompaniment, ttnet
+04b.yaml	vocals-accompaniment, ttnet_no_transformer

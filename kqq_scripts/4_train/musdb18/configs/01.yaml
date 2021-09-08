@@ -5,14 +5,14 @@ train:
         - vocals
         - accompaniment
     target_source_types: 
-        - vocals
-    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment.pkl"
+        - accompaniment
+    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment_10s.pkl"
     sample_rate: 44100
     channels: 2
-    segment_seconds: 3.0
-    model_type: UNet
+    segment_seconds: 10.0
+    model_type: TTnet
     loss_type: l1_wav
-    optimizer_type: Adam
+    optimizer_type: AdamW
     mini_data: False
     augmentations:
         mixaudio:
@@ -37,7 +37,7 @@ train:
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
     learning_rate: 1e-3
-    batch_size: 16
+    batch_size: 8
     precision: 32
     steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
     evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.
@@ -49,5 +49,5 @@ train:
     resume_checkpoint: ""
 
 evaluate:
-    segment_seconds: 30.0
+    segment_seconds: 10.0
     batch_size: 1

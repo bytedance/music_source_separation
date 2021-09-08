@@ -13,6 +13,7 @@ class LitSourceSeparation(pl.LightningModule):
         batch_data_preprocessor,
         model: nn.Module,
         loss_function: Callable,
+        optimizer_type: str,
         learning_rate: float,
         lr_lambda: Callable,
     ):
@@ -31,6 +32,7 @@ class LitSourceSeparation(pl.LightningModule):
         
         self.batch_data_preprocessor = batch_data_preprocessor
         self.model = model
+        self.optimizer_type = optimizer_type
         self.loss_function = loss_function
         self.learning_rate = learning_rate
         self.lr_lambda = lr_lambda
@@ -82,14 +84,28 @@ class LitSourceSeparation(pl.LightningModule):
     def configure_optimizers(self) -> Any:
         r"""Configure optimizer."""
 
-        optimizer = optim.Adam(
-            self.model.parameters(),
-            lr=self.learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-08,
-            weight_decay=0.0,
-            amsgrad=True,
-        )
+        if self.optimizer_type == "Adam":
+            optimizer = optim.Adam(
+                self.model.parameters(),
+                lr=self.learning_rate,
+                betas=(0.9, 0.999),
+                eps=1e-08,
+                weight_decay=0.,
+                amsgrad=True,
+            )
+
+        elif self.optimizer_type == "AdamW":
+            optimizer = optim.AdamW(
+                self.model.parameters(), 
+                lr=self.learning_rate, 
+                betas=(0.9, 0.999), 
+                eps=1e-08, 
+                weight_decay=0., 
+                amsgrad=True
+            )
+
+        else:
+            raise NotImplementedError
 
         scheduler = {
             'scheduler': LambdaLR(optimizer, self.lr_lambda),
@@ -158,6 +174,14 @@ def get_model_class(model_type):
     elif model_type == 'WavUNetLevelRNN':
         from bytesep.models.wavunet_levelrnn import WavUNetLevelRNN
         return WavUNetLevelRNN
+
+    elif model_type == 'TTnet':
+        from bytesep.models.ttnet import TTnet
+        return TTnet
+
+    elif model_type == 'TTnetNoTransformer':
+        from bytesep.models.ttnet_no_transformer import TTnetNoTransformer
+        return TTnetNoTransformer
 
     else:
         raise NotImplementedError

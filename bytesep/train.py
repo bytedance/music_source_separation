@@ -121,9 +121,9 @@ def _get_data_module(
     indexes_path = os.path.join(workspace, configs['train']['indexes_dict'])
     sample_rate = configs['train']['sample_rate']
     segment_seconds = configs['train']['segment_seconds']
-    mixaudio_dict = configs['train']['mixaudio']
-    augmentation = configs['train']['augmentation']
-    max_pitch_shift = max([augmentation['pitch_shift'][source_type] for source_type in input_source_types])
+    mixaudio_dict = configs['train']['augmentations']['mixaudio']
+    augmentations = configs['train']['augmentations']
+    max_pitch_shift = max([augmentations['pitch_shift'][source_type] for source_type in input_source_types])
     batch_size = configs['train']['batch_size']
     steps_per_epoch = configs['train']['steps_per_epoch']
     mini_data = configs['train']['mini_data']
@@ -141,7 +141,7 @@ def _get_data_module(
     )
 
     # augmentor
-    augmentor = Augmentor(augmentation=augmentation)
+    augmentor = Augmentor(augmentations=augmentations)
 
     # dataset
     train_dataset = Dataset(augmentor, segment_samples)
@@ -180,6 +180,7 @@ def train(args) -> None:
     batch_data_preprocessor_type = configs['train']['batch_data_preprocessor']
     model_type = configs['train']['model_type']
     loss_type = configs['train']['loss_type']
+    optimizer_type = configs['train']['optimizer_type']
     learning_rate = float(configs['train']['learning_rate'])
     precision = configs['train']['precision']
     early_stop_steps = configs['train']['early_stop_steps']
@@ -227,7 +228,7 @@ def train(args) -> None:
         model=model,
         evaluate_device=evaluate_device,
     )
-    callbacks = []
+    # callbacks = []
 
     # learning rate reduce function
     lr_lambda = partial(
@@ -238,6 +239,7 @@ def train(args) -> None:
     pl_model = LitSourceSeparation(
         batch_data_preprocessor=batch_data_preprocessor,
         model=model,
+        optimizer_type=optimizer_type,
         loss_function=loss_function,
         learning_rate=learning_rate,
         lr_lambda=lr_lambda,

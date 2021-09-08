@@ -1,38 +1,38 @@
 ---
-task_name: musdb18
+task_name: vctk-musdb18
 train:
     input_source_types:
-        - vocals
+        - speech
         - accompaniment
     target_source_types: 
-        - vocals
-    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment.pkl"
+        - accompaniment
+    indexes_dict: "indexes/vctk-musdb18/sr=44100_chn=2/train/speech-accompaniment.pkl"
     sample_rate: 44100
     channels: 2
     segment_seconds: 3.0
-    model_type: UNet
+    model_type: ResUNet143_Subbandtime
     loss_type: l1_wav
     optimizer_type: Adam
     mini_data: False
     augmentations:
         mixaudio:
-            vocals: 2
-            accompaniment: 2
+            speech: 1
+            accompaniment: 1
         pitch_shift:
-            vocals: 0
+            speech: 0
             accompaniment: 0
         magnitude_scale:
-            vocals:
-                lower_db: 0
-                higher_db: 0
+            speech:
+                lower_db: -10
+                higher_db: 10
             accompaniment:
-                lower_db: 0
-                higher_db: 0
+                lower_db: -30
+                higher_db: 10
         swap_channel:
-            vocals: False
+            speech: False
             accompaniment: False
         flip_axis:
-            vocals: False
+            speech: False
             accompaniment: False
     batch_data_preprocessor: BasicBatchDataPreprocessor
     evaluation_callback: Musdb18EvaluationCallback
