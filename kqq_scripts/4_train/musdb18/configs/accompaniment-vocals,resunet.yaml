@@ -12,6 +12,7 @@ train:
     segment_seconds: 3.0
     model_type: ResUNet143_DecouplePlusInplaceABN_ISMIR2021
     loss_type: l1_wav
+    optimizer_type: Adam
     mini_data: False
     augmentations:
         mixaudio:

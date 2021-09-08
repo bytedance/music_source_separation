@@ -11,8 +11,8 @@ train:
     channels: 2
     segment_seconds: 10.0
     model_type: TTnet
-    optimizer_type: AdamW
     loss_type: l1_wav
+    optimizer_type: AdamW
     mini_data: False
     augmentations:
         mixaudio:
