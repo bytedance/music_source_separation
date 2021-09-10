@@ -5,7 +5,7 @@ train:
         - speech
         - accompaniment
     target_source_types: 
-        - accompaniment
+        - speech
     indexes_dict: "indexes/vctk-musdb18/sr=44100_chn=2/train/speech-accompaniment.pkl"
     sample_rate: 44100
     channels: 2

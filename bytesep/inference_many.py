@@ -26,6 +26,7 @@ def inference(args):
     checkpoint_path = args.checkpoint_path
     audios_dir = args.audios_dir
     output_dir = args.output_dir
+    scale_volume = args.scale_volume
 
     configs = read_yaml(config_yaml)
     sample_rate = configs['train']['sample_rate']
@@ -80,6 +81,9 @@ def inference(args):
         print('Separate time: {:.3f} s'.format(time.time() - separate_time))
 
         # Write out separated audio.
+        if scale_volume:
+            sep_wav /= np.max(np.abs(sep_wav))
+
         soundfile.write(file='_zz.wav', data=sep_wav.T, samplerate=sample_rate)
 
         output_path = os.path.join(output_dir, '{}.mp3'.format(pathlib.Path(audio_name).stem))
@@ -94,6 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_path", type=str, required=True)
     parser.add_argument("--audios_dir", type=str, required=True)
     parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument('--scale_volume', action='store_true', default=False)
 
     args = parser.parse_args()
     inference(args)

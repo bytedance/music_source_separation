@@ -61,7 +61,7 @@ class LitSourceSeparation(pl.LightningModule):
         # from IPython import embed; embed(using=False); os._exit(0)
         # import soundfile
         # soundfile.write(file='_zz.wav', data=input_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=44100)
-        # soundfile.write(file='_zz2.wav', data=target_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=32000)
+        # soundfile.write(file='_zz2.wav', data=target_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=44100)
 
         # Forward.
         self.model.train()
