@@ -3,6 +3,7 @@ import torch.nn as nn
 from fast_transformers.builders import TransformerEncoderBuilder
 import torch.nn.functional as F
 import time
+from typing import NoReturn
 
 
 def init_layer(layer: nn.Module) -> NoReturn:
