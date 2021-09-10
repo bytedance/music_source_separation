@@ -5,6 +5,15 @@ import torch.nn.functional as F
 import time
 
 
+def init_layer(layer: nn.Module) -> NoReturn:
+    r"""Initialize a Linear or Convolutional layer."""
+    nn.init.xavier_uniform_(layer.weight)
+
+    if hasattr(layer, "bias"):
+        if layer.bias is not None:
+            layer.bias.data.fill_(0.0)
+
+
 class TTnet(nn.Module):
     def __init__(
         self,
@@ -203,6 +212,11 @@ class LinearTransformer(nn.Module):
         self.channels_num = channels_num
 
         self.conv = nn.Conv1d(channels_num, channels_num * 3, kernel_size=1, padding=0)
+
+        self.init_weights()
+
+    def init_weights(self):
+        init_layer(self.conv)
 
     def forward(self, x):
         
