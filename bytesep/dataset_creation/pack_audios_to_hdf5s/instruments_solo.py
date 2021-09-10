@@ -16,26 +16,28 @@ from bytesep.utils import float32_to_int16, load_audio
 
 def read_csv(meta_csv) -> Dict:
     r"""Get train & test names from csv.
-    
+
     Args:
         meta_csv: str
 
     Returns:
         names_dict: dict, e.g., {
-            'train', ['a1.mp3', 'a2.mp3'], 
+            'train', ['a1.mp3', 'a2.mp3'],
             'test': ['b1.mp3', 'b2.mp3']
         }
     """
     df = pd.read_csv(meta_csv, sep=',')
-    
+
     names_dict = {}
 
     for split in ['train', 'test']:
         audio_indexes = df['split'] == split
         audio_names = list(df['audio_name'][audio_indexes])
-        audio_names = ['{}.mp3'.format(pathlib.Path(audio_name).stem) for audio_name in audio_names]
+        audio_names = [
+            '{}.mp3'.format(pathlib.Path(audio_name).stem) for audio_name in audio_names
+        ]
         names_dict['{}'.format(split)] = audio_names
-        
+
     return names_dict
 
 
@@ -120,7 +122,9 @@ def write_single_audio_to_hdf5(param: List) -> NoReturn:
         audio = load_audio(audio_path=audio_path, mono=mono, sample_rate=sample_rate)
         # audio: (channels_num, audio_samples)
 
-        hf.create_dataset(name=source_type, data=float32_to_int16(audio), dtype=np.int16)
+        hf.create_dataset(
+            name=source_type, data=float32_to_int16(audio), dtype=np.int16
+        )
 
     print('{} Write hdf5 to {}'.format(audio_index, hdf5_path))
 
@@ -134,11 +138,11 @@ if __name__ == "__main__":
         required=True,
         help="Directory of the instruments solo dataset.",
     )
+    parser.add_argument("--split", type=str, required=True, choices=["train", "test"])
     parser.add_argument(
-        "--split", type=str, required=True, choices=["train", "test"]
-    )
-    parser.add_argument(
-        "--source_type", type=str, required=True,
+        "--source_type",
+        type=str,
+        required=True,
     )
     parser.add_argument(
         "--hdf5s_dir",
@@ -146,9 +150,7 @@ if __name__ == "__main__":
         required=True,
         help="Directory to write out hdf5 files.",
     )
-    parser.add_argument(
-        "--sample_rate", type=int, required=True, help="Sample rate."
-    )
+    parser.add_argument("--sample_rate", type=int, required=True, help="Sample rate.")
     parser.add_argument(
         "--channels", type=int, required=True, help="Use 1 for mono, 2 for stereo."
     )

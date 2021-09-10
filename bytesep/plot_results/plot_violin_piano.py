@@ -9,14 +9,16 @@ import logging
 import pickle
 import matplotlib.pyplot as plt
 
-def plot_statistics(args):
 
+def plot_statistics(args):
     def load_sdrs(config, gpus, filename='train', source_type='vocals'):
 
-        stat_path = './workspaces/bytesep/statistics/violin-piano/train/config={},gpus={}/statistics.pkl'.format(config, gpus)
+        stat_path = './workspaces/bytesep/statistics/violin-piano/train/config={},gpus={}/statistics.pkl'.format(
+            config, gpus
+        )
 
         stat_dict = pickle.load(open(stat_path, 'rb'))
-        
+
         median_sdrs = [e['sdr'] for e in stat_dict['test']]
 
         return median_sdrs
@@ -31,25 +33,25 @@ def plot_statistics(args):
 
     if select == '1a':
         sdrs = load_sdrs(config='01_violin', gpus=1)
-        line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
+        (line,) = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
         lines.append(line)
 
         sdrs = load_sdrs(config='01_piano', gpus=1)
-        line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
+        (line,) = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
         lines.append(line)
 
     elif select == '1b':
         sdrs = load_sdrs(config='02_violin', gpus=1)
-        line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
+        (line,) = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
         lines.append(line)
 
         sdrs = load_sdrs(config='02_piano', gpus=1)
-        line, = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
+        (line,) = ax.plot(sdrs, label='UNet,l1_wav', linewidth=linewidth)
         lines.append(line)
 
     else:
         raise Exception('Error!')
-    
+
     max_plot_iteration = 500001
     iterations = np.arange(0, max_plot_iteration, 10000 * expand)
     ax.set_ylim(0, ylim)
@@ -67,15 +69,13 @@ def plot_statistics(args):
     print('Save figure to {}'.format(save_out_path))
 
 
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Example of parser. ')
     subparsers = parser.add_subparsers(dest='mode')
 
     parser_plot = subparsers.add_parser('plot')
     parser_plot.add_argument('--select', type=str, required=True)
- 
+
     args = parser.parse_args()
 
     if args.mode == 'plot':

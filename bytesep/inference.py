@@ -166,7 +166,9 @@ class Separator:
         else:
             return False
 
-    def _forward_in_mini_batches(self, model: nn.Module, segments_input_dict: Dict, batch_size: int) -> Dict:
+    def _forward_in_mini_batches(
+        self, model: nn.Module, segments_input_dict: Dict, batch_size: int
+    ) -> Dict:
         r"""Forward data to model in mini-batch.
 
         Args:
@@ -225,7 +227,10 @@ def inference(args):
 
     # Need to use torch.distributed if models contain inplace_abn.abn.InPlaceABNSync.
     import torch.distributed as dist
-    dist.init_process_group('gloo', init_method='file:///tmp/somefile', rank=0, world_size=1)
+
+    dist.init_process_group(
+        'gloo', init_method='file:///tmp/somefile', rank=0, world_size=1
+    )
 
     # Arguments & parameters
     config_yaml = args.config_yaml
@@ -249,7 +254,7 @@ def inference(args):
 
     # Get model class.
     Model = get_model_class(model_type)
-    
+
     # Create model.
     model = Model(input_channels=input_channels, target_sources_num=target_sources_num)
 
@@ -261,7 +266,12 @@ def inference(args):
     model.to(device)
 
     # Create separator.
-    separator = Separator(model=model, segment_samples=segment_samples, batch_size=batch_size, device=device)
+    separator = Separator(
+        model=model,
+        segment_samples=segment_samples,
+        batch_size=batch_size,
+        device=device,
+    )
 
     # Load audio.
     audio, _ = librosa.load(audio_path, sr=sample_rate, mono=False)

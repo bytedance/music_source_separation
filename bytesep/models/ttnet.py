@@ -2,14 +2,16 @@ import torch
 import torch.nn as nn
 from fast_transformers.builders import TransformerEncoderBuilder
 import torch.nn.functional as F
+import time
 
 
 class TTnet(nn.Module):
-    def __init__(self,
+    def __init__(
+        self,
         input_channels,
         target_sources_num,
-                 depth=6,
-                 ):
+        depth=6,
+    ):
         super(TTnet, self).__init__()
 
         in_channels = input_channels
@@ -30,11 +32,29 @@ class TTnet(nn.Module):
             # ---------------------------------
 
             if index < 3:
-                encode += [TransformerEncoderLayer(in_channel=in_channels, out_channel=channels, kernel_size=kernel_size, stride=kernel_size, padding=0), nn.ReLU()]
+                encode += [
+                    TransformerEncoderLayer(
+                        in_channel=in_channels,
+                        out_channel=channels,
+                        kernel_size=kernel_size,
+                        stride=kernel_size,
+                        padding=0,
+                    ),
+                    nn.ReLU(),
+                ]
                 self.encoder.append(nn.Sequential(*encode))
                 kernel_size = int(kernel_size // 4)
             else:
-                encode += [TransformerEncoderLayer(in_channel=in_channels, out_channel=channels, kernel_size=seq_len, stride=seq_len, padding=0), nn.ReLU()]
+                encode += [
+                    TransformerEncoderLayer(
+                        in_channel=in_channels,
+                        out_channel=channels,
+                        kernel_size=seq_len,
+                        stride=seq_len,
+                        padding=0,
+                    ),
+                    nn.ReLU(),
+                ]
                 self.encoder.append(nn.Sequential(*encode))
 
             decode = []
@@ -49,9 +69,25 @@ class TTnet(nn.Module):
             # -----------------------------
 
             if index < 3:
-                decode += [TransformerDecoderLayer(in_channel=channels, out_channel=out_channels, kernel_size=kernel_size, stride=kernel_size, padding=0)]
+                decode += [
+                    TransformerDecoderLayer(
+                        in_channel=channels,
+                        out_channel=out_channels,
+                        kernel_size=kernel_size,
+                        stride=kernel_size,
+                        padding=0,
+                    )
+                ]
             else:
-                decode += [TransformerDecoderLayer(in_channel=channels, out_channel=out_channels, kernel_size=seq_len, stride=seq_len, padding=0)]
+                decode += [
+                    TransformerDecoderLayer(
+                        in_channel=channels,
+                        out_channel=out_channels,
+                        kernel_size=seq_len,
+                        stride=seq_len,
+                        padding=0,
+                    )
+                ]
 
             if index > 0:
                 decode.append(nn.ReLU())
@@ -61,12 +97,12 @@ class TTnet(nn.Module):
             in_channels = channels
             channels = int(2 * channels)
 
-
-    def forward(self,
+    def forward(
+        self,
         input_dict
-                # audio_input=None,
-                # audio_target=None,
-                ):
+        # audio_input=None,
+        # audio_target=None,
+    ):
 
         audio_input = input_dict['waveform']
         # from IPython import embed; embed(using=False); os._exit(0)
@@ -78,9 +114,12 @@ class TTnet(nn.Module):
         # x = F.pad(audio_input, (0, 344), "constant", 0)
 
         saved = []
-        for encode in self.encoder:
+        t1 = time.time()
+        for i, encode in enumerate(self.encoder):
             x = encode(x)
             saved.append(x)
+            print(i, time.time() - t1)
+            t1 = time.time()
 
         for decode in self.decoder:
             skip = saved.pop(-1)
@@ -96,15 +135,16 @@ class TTnet(nn.Module):
 
         return output_dict
 
-
+'''
 class TransformerEncoderLayer(nn.Module):
-    def __init__(self,
-                 in_channel,
-                 out_channel,
-                 kernel_size,
-                 stride,
-                 padding,
-                 ):
+    def __init__(
+        self,
+        in_channel,
+        out_channel,
+        kernel_size,
+        stride,
+        padding,
+    ):
         super(TransformerEncoderLayer, self).__init__()
         self.in_channel = in_channel
         self.out_channel = out_channel
@@ -112,7 +152,11 @@ class TransformerEncoderLayer(nn.Module):
         self.stride = stride
         self.padding = padding
 
-        self.unfold = nn.Unfold(kernel_size=(self.kernel_size, 1), stride=(self.stride, 1), padding=(self.padding, 0), )
+        self.unfold = nn.Unfold(
+            kernel_size=(self.kernel_size, 1),
+            stride=(self.stride, 1),
+            padding=(self.padding, 0),
+        )
 
         self.trans = TransformerEncoderBuilder.from_kwargs(
             n_layers=1,
@@ -120,10 +164,13 @@ class TransformerEncoderLayer(nn.Module):
             query_dimensions=self.out_channel // 32,
             value_dimensions=self.out_channel // 32,
             feed_forward_dimensions=self.out_channel * 4,
-            attention_type="linear").get()
+            attention_type="linear",
+        ).get()
         self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.out_channel))
 
-        self.cnn = nn.Conv1d(self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2)
+        self.cnn = nn.Conv1d(
+            self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2
+        )
 
     def forward(self, x):
         in_channel = x.size()[1]
@@ -131,7 +178,9 @@ class TransformerEncoderLayer(nn.Module):
         x = x.unsqueeze(-1)
         x = self.unfold(x)
         bs, _, num_packs = x.size()
-        x = x.view(bs, self.out_channel, self.kernel_size, num_packs).permute(0, 3, 2, 1)
+        x = x.view(bs, self.out_channel, self.kernel_size, num_packs).permute(
+            0, 3, 2, 1
+        )
         x = x.reshape(bs * num_packs, self.kernel_size, self.out_channel)
 
         # -------------
@@ -143,18 +192,93 @@ class TransformerEncoderLayer(nn.Module):
         # x = x.view(bs, num_packs, self.out_channel, )  # (1, 110592, 16)
         #
         x = x.transpose(1, 2)  # (1, 16, 110592)
+        return x
+'''
 
+
+class LinearTransformer(nn.Module):
+    def __init__(self, channels_num):
+        super(LinearTransformer, self).__init__()
+
+        self.channels_num = channels_num
+
+        self.conv = nn.Conv1d(channels_num, channels_num * 3, kernel_size=1, padding=0)
+
+    def forward(self, x):
+        
+        x = self.conv(x)
+        # x: (batch_size, channels_num * 3, segment_samples)
+        
+        q = x[:, 0 : self.channels_num, :]
+        k = x[:, self.channels_num * 1 : self.channels_num * 2, :]
+        v = x[:, self.channels_num * 2 :, :]
+        # q, k, v: (batch_size, channels_num, segment_samples)
+
+        a1 = torch.bmm(k, v.transpose(1, 2))
+        # (batch_size, channels_num, channels_num)
+
+        output = torch.bmm(a1, q)
+
+        return output
+
+
+class TransformerEncoderLayer(nn.Module):
+    def __init__(
+        self,
+        in_channel,
+        out_channel,
+        kernel_size,
+        stride,
+        padding,
+    ):
+        super(TransformerEncoderLayer, self).__init__()
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+        self.unfold = nn.Unfold(
+            kernel_size=(self.kernel_size, 1),
+            stride=(self.stride, 1),
+            padding=(self.padding, 0),
+        )
+
+        self.trans = TransformerEncoderBuilder.from_kwargs(
+            n_layers=1,
+            n_heads=32,
+            query_dimensions=self.out_channel // 32,
+            value_dimensions=self.out_channel // 32,
+            feed_forward_dimensions=self.out_channel * 4,
+            attention_type="linear",
+        ).get()
+        self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.out_channel))
+
+        self.cnn = nn.Conv1d(
+            self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2
+        )
+
+        self.transformer_layer = LinearTransformer(self.out_channel)
+
+
+    def forward(self, x):
+        in_channel = x.size()[1]
+        x = self.cnn(x)
+
+        x = self.transformer_layer(x)
+        
         return x
 
 
 class TransformerDecoderLayer(nn.Module):
-    def __init__(self,
-                 in_channel,
-                 out_channel,
-                 kernel_size,
-                 stride,
-                 padding,
-                 ):
+    def __init__(
+        self,
+        in_channel,
+        out_channel,
+        kernel_size,
+        stride,
+        padding,
+    ):
         super(TransformerDecoderLayer, self).__init__()
         self.in_channel = in_channel
         self.out_channel = out_channel
@@ -162,7 +286,11 @@ class TransformerDecoderLayer(nn.Module):
         self.stride = stride
         self.padding = padding
 
-        self.unfold = nn.Unfold(kernel_size=(self.kernel_size, 1), stride=(self.stride, 1), padding=(self.padding, 0), )
+        self.unfold = nn.Unfold(
+            kernel_size=(self.kernel_size, 1),
+            stride=(self.stride, 1),
+            padding=(self.padding, 0),
+        )
 
         self.trans = TransformerEncoderBuilder.from_kwargs(
             n_layers=1,
@@ -170,10 +298,13 @@ class TransformerDecoderLayer(nn.Module):
             query_dimensions=self.in_channel // 32,
             value_dimensions=self.in_channel // 32,
             feed_forward_dimensions=self.in_channel * 4,
-            attention_type="linear").get()
+            attention_type="linear",
+        ).get()
         self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.in_channel))
 
-        self.t_cnn = nn.ConvTranspose1d(self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2)
+        self.t_cnn = nn.ConvTranspose1d(
+            self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2
+        )
 
     def forward(self, x):
         in_channel = x.size()[1]
@@ -194,6 +325,7 @@ class TransformerDecoderLayer(nn.Module):
         x = self.t_cnn(x)
 
         return x
+
 
 #
 # test_layer = TransformerDecoderLayer(in_channel=256, out_channel=128, kernel_size=8, stride=4, padding=2)

@@ -3,24 +3,17 @@ from typing import Dict
 import librosa
 import numpy as np
 
-from bytesep.utils import (
-    db_to_magnitude,
-    get_pitch_shift_factor,
-    magnitude_to_db,
-)
+from bytesep.utils import db_to_magnitude, get_pitch_shift_factor, magnitude_to_db
 
 
 class Augmentor:
     def __init__(self, augmentations: Dict, random_seed=1234):
-        r"""Augmentor for augment a waveform.
+        r"""Augmentor for data augmentation of a waveform.
 
         Args:
             augmentations: Dict, e.g, {
-                'pitch_shift': {'vocals': 4, 'accompaniment': 2},
-                'magnitude_scale': {
-                    'vocals': {'lower_db': -20, 'higher_db': 20},
-                    'accompaniment': {'lower_db': -20, 'higher_db': 20}
-                }
+                'mixaudio': {'vocals': 2, 'accompaniment': 2}
+                'pitch_shift': {'vocals': 4, 'accompaniment': 4},
                 ...,
             }
             random_seed: int
@@ -33,6 +26,7 @@ class Augmentor:
 
         Args:
             waveform: (channels_num, audio_samples)
+            source_type: str
 
         Returns:
             new_waveform: (channels_num, new_audio_samples)
@@ -52,11 +46,13 @@ class Augmentor:
         return waveform
 
     def pitch_shift(self, waveform: np.array, source_type: str) -> np.array:
-        r"""Shift pitch of a waveform. The length of the returned waveform will
-        be changed.
+        r"""Shift the pitch of a waveform. We use resampling for fast pitch
+        shifting, so the speed will also be chaneged. The length of the returned
+        waveform will be changed.
 
         Args:
             waveform: (channels_num, audio_samples)
+            source_type: str
 
         Returns:
             new_waveform: (channels_num, new_audio_samples)
@@ -73,9 +69,8 @@ class Augmentor:
             low=-max_pitch_shift, high=max_pitch_shift
         )
 
-        # Pitch shift factor indicates how much a signal is stretched or
-        # squeezed along the time axis. We use librosa.resample instead of 
-        # librosa.effects.pitch_shift because it is 10x times faster.
+        # We use librosa.resample instead of librosa.effects.pitch_shift
+        # because it is 10x times faster.
         pitch_shift_factor = get_pitch_shift_factor(rand_pitch)
         dummy_sample_rate = 10000  # Dummy constant.
 
@@ -102,6 +97,7 @@ class Augmentor:
 
         Args:
             waveform: (channels_num, audio_samples)
+            source_type: str
 
         Returns:
             new_waveform: (channels_num, audio_samples)
@@ -127,11 +123,12 @@ class Augmentor:
 
         return new_waveform
 
-    def swap_channel(self, waveform, source_type):
+    def swap_channel(self, waveform: np.array, source_type: str) -> np.array:
         r"""Randomly swap channels.
 
         Args:
             waveform: (channels_num, audio_samples)
+            source_type: str
 
         Returns:
             new_waveform: (channels_num, audio_samples)
@@ -144,7 +141,17 @@ class Augmentor:
             random_axes = self.random_state.permutation(ndim)
             return waveform[random_axes, :]
 
-    def flip_axis(self, waveform, source_type):
+    def flip_axis(self, waveform: np.array, source_type: str) -> np.array:
+        r"""Randomly flip the waveform along x-axis.
+
+        Args:
+            waveform: (channels_num, audio_samples)
+            source_type: str
+
+        Returns:
+            new_waveform: (channels_num, audio_samples)
+        """
         ndim = waveform.shape[0]
         random_values = self.random_state.choice([-1, 1], size=ndim)
+
         return waveform * random_values[:, None]

@@ -18,9 +18,15 @@ from bytesep.utils import float32_to_int16, load_audio
 def get_random_segment(audio_path, random_state, segment_seconds, mono, sample_rate):
     duration = librosa.get_duration(filename=audio_path)
 
-    start_time = random_state.uniform(0., duration - segment_seconds)
+    start_time = random_state.uniform(0.0, duration - segment_seconds)
 
-    audio = load_audio(audio_path=audio_path, mono=mono, sample_rate=sample_rate, offset=start_time, duration=segment_seconds)
+    audio = load_audio(
+        audio_path=audio_path,
+        mono=mono,
+        sample_rate=sample_rate,
+        offset=start_time,
+        duration=segment_seconds,
+    )
 
     return audio
 
@@ -34,7 +40,7 @@ def create_evaluation(args):
     channels = args.channels
     evaluation_segments_num = args.evaluation_segments_num
     mono = True if channels == 1 else False
-    
+
     split = 'test'
 
     random_state = np.random.RandomState(1234)
@@ -64,43 +70,59 @@ def create_evaluation(args):
     track_indexes = np.arange(len(mus.tracks))
 
     for n in range(evaluation_segments_num):
-        
+
         print('{} / {}'.format(n, evaluation_segments_num))
 
         # Randomly select and write out a clean speech segment.
-        speech_audio_path = random_state.choice(speech_audio_paths) 
+        speech_audio_path = random_state.choice(speech_audio_paths)
 
-        speech_audio = load_audio(audio_path=speech_audio_path, mono=mono, sample_rate=sample_rate)
+        speech_audio = load_audio(
+            audio_path=speech_audio_path, mono=mono, sample_rate=sample_rate
+        )
         # (channels_num, audio_samples)
-        
+
         if channels == 2:
             speech_audio = np.tile(speech_audio, (2, 1))
         # (channels_num, audio_samples)
 
-        output_speech_path = os.path.join(evaluation_audios_dir, split, 'speech', '{:04d}.wav'.format(n))
-        soundfile.write(file=output_speech_path, data=speech_audio.T, samplerate=sample_rate)
+        output_speech_path = os.path.join(
+            evaluation_audios_dir, split, 'speech', '{:04d}.wav'.format(n)
+        )
+        soundfile.write(
+            file=output_speech_path, data=speech_audio.T, samplerate=sample_rate
+        )
         print("Write out to {}".format(output_speech_path))
 
         # Randomly select and write out a clean music segment.
         track_index = random_state.choice(track_indexes)
         track = mus[track_index]
-        
+
         segment_samples = speech_audio.shape[1]
-        start_sample = int(random_state.uniform(0., segment_samples - speech_audio.shape[1]))
+        start_sample = int(
+            random_state.uniform(0.0, segment_samples - speech_audio.shape[1])
+        )
 
         music_audio = track.audio[start_sample : start_sample + segment_samples, :].T
         # (channels_num, audio_samples)
 
-        output_music_path = os.path.join(evaluation_audios_dir, split, 'music', '{:04d}.wav'.format(n))
-        soundfile.write(file=output_music_path, data=music_audio.T, samplerate=sample_rate)
+        output_music_path = os.path.join(
+            evaluation_audios_dir, split, 'music', '{:04d}.wav'.format(n)
+        )
+        soundfile.write(
+            file=output_music_path, data=music_audio.T, samplerate=sample_rate
+        )
         print("Write out to {}".format(output_music_path))
 
         # Get and write out a mixture segment.
         mixture_audio = speech_audio + music_audio
         # (channels_num, audio_samples)
 
-        output_mixture_path = os.path.join(evaluation_audios_dir, split, 'mixture', '{:04d}.wav'.format(n))
-        soundfile.write(file=output_mixture_path, data=mixture_audio.T, samplerate=sample_rate)
+        output_mixture_path = os.path.join(
+            evaluation_audios_dir, split, 'mixture', '{:04d}.wav'.format(n)
+        )
+        soundfile.write(
+            file=output_mixture_path, data=mixture_audio.T, samplerate=sample_rate
+        )
         print("Write out to {}".format(output_mixture_path))
 
 

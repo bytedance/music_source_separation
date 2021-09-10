@@ -12,11 +12,17 @@ import matplotlib.pyplot as plt
 
 def load_sdrs(workspace, task_name, filename, config, gpus):
 
-    stat_path = os.path.join(workspace, "statistics", task_name, filename, 
-        "config={},gpus={}".format(config, gpus), "statistics.pkl")
+    stat_path = os.path.join(
+        workspace,
+        "statistics",
+        task_name,
+        filename,
+        "config={},gpus={}".format(config, gpus),
+        "statistics.pkl",
+    )
 
     stat_dict = pickle.load(open(stat_path, 'rb'))
-    
+
     median_pesqs = [e['pesq'] for e in stat_dict['test']]
 
     return median_pesqs
@@ -42,12 +48,12 @@ def plot_statistics(args):
 
     if select == '1a':
         pesqs = load_sdrs(workspace, task_name, filename, config='unet', gpus=1)
-        line, = ax.plot(pesqs, label='UNet,l1_wav', linewidth=linewidth)
+        (line,) = ax.plot(pesqs, label='UNet,l1_wav', linewidth=linewidth)
         lines.append(line)
 
     else:
         raise Exception('Error!')
-    
+
     eval_every_iterations = 10000
     total_ticks = 50
     ticks_freq = 10
@@ -55,7 +61,13 @@ def plot_statistics(args):
     ax.set_ylim(0, ylim)
     ax.set_xlim(0, total_ticks)
     ax.xaxis.set_ticks(np.arange(0, total_ticks + 1, ticks_freq))
-    ax.xaxis.set_ticklabels(np.arange(0, total_ticks * eval_every_iterations + 1, ticks_freq * eval_every_iterations))
+    ax.xaxis.set_ticklabels(
+        np.arange(
+            0,
+            total_ticks * eval_every_iterations + 1,
+            ticks_freq * eval_every_iterations,
+        )
+    )
     ax.yaxis.set_ticks(np.arange(ylim + 1))
     ax.yaxis.set_ticklabels(np.arange(ylim + 1))
     ax.grid(color='b', linestyle='solid', linewidth=0.3)
@@ -69,7 +81,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--workspace', type=str, required=True)
     parser.add_argument('--select', type=str, required=True)
- 
+
     args = parser.parse_args()
 
     plot_statistics(args)

@@ -1,26 +1,20 @@
 import logging
 import os
-import pathlib
 import time
-from typing import List
+from typing import Dict, List, NoReturn
 
 import librosa
 import musdb
-import h5py
 import museval
 import numpy as np
 import pytorch_lightning as pl
 import torch.nn as nn
 from pytorch_lightning.utilities import rank_zero_only
 
-from bytesep.dataset_creation.pack_audios_to_hdf5s.musdb18 import preprocess_audio
 from bytesep.callbacks.base_callbacks import SaveCheckpointsCallback
+from bytesep.dataset_creation.pack_audios_to_hdf5s.musdb18 import preprocess_audio
 from bytesep.inference import Separator
-from bytesep.utils import (
-    StatisticsContainer,
-    int16_to_float32,
-    read_yaml,
-)
+from bytesep.utils import StatisticsContainer, read_yaml
 
 
 def get_musdb18_callbacks(
@@ -32,13 +26,13 @@ def get_musdb18_callbacks(
     model: nn.Module,
     evaluate_device: str,
 ) -> List[pl.Callback]:
-    """Get MUSDB18 callbacks of a config yaml.
+    r"""Get MUSDB18 callbacks of a config yaml.
 
     Args:
         config_yaml: str
         workspace: str
-        checkpoints_dir: str
-        statistics_dir: str
+        checkpoints_dir: str, directory to save checkpoints
+        statistics_dir: str, directory to save statistics
         logger: pl.loggers.TensorBoardLogger
         model: nn.Module
         evaluate_device: str
@@ -128,24 +122,25 @@ class Musdb18EvaluationCallback(pl.Callback):
         dataset_dir: str,
         model: nn.Module,
         target_source_types: str,
-        input_channels,
+        input_channels: int,
         split: str,
-        sample_rate,
+        sample_rate: int,
         segment_samples: int,
         batch_size: int,
         device: str,
         evaluate_step_frequency: int,
-        logger,
+        logger: pl.loggers.TensorBoardLogger,
         statistics_container: StatisticsContainer,
     ):
         r"""Callback to evaluate every #save_step_frequency steps.
 
         Args:
+            dataset_dir: str
             model: nn.Module
             target_source_types: List[str], e.g., ['vocals', 'bass', ...]
             input_channels: int
-            hdf5s_dir, str, directory containing hdf5 files for evaluation.
             split: 'train' | 'test'
+            sample_rate: int
             segment_samples: int, length of segments to be input to a model, e.g., 44100*30
             batch_size, int, e.g., 12
             device: str, e.g., 'cuda'
@@ -174,7 +169,7 @@ class Musdb18EvaluationCallback(pl.Callback):
         self.separator = Separator(model, self.segment_samples, batch_size, device)
 
     @rank_zero_only
-    def on_batch_end(self, trainer: pl.Trainer, _) -> None:
+    def on_batch_end(self, trainer: pl.Trainer, _) -> NoReturn:
         r"""Evaluate separation SDRs of audio recordings."""
         global_step = trainer.global_step
 
@@ -191,52 +186,59 @@ class Musdb18EvaluationCallback(pl.Callback):
 
                 audio_name = track.name
 
+                # Get waveform of mixture.
                 mixture = track.audio.T
                 # (channels_num, audio_samples)
 
                 mixture = preprocess_audio(
-                    audio=mixture, 
-                    mono=self.mono, 
-                    origin_sr=track.rate, 
-                    sr=self.sample_rate, 
-                    resample_type=self.resample_type
+                    audio=mixture,
+                    mono=self.mono,
+                    origin_sr=track.rate,
+                    sr=self.sample_rate,
+                    resample_type=self.resample_type,
                 )
                 # (channels_num, audio_samples)
 
                 target_dict = {}
                 sdr_dict[audio_name] = {}
 
+                # Get waveform of all target source types.
                 for j, source_type in enumerate(self.target_source_types):
+                    # E.g., ['vocals', 'bass', ...]
 
                     audio = track.targets[source_type].audio.T
 
                     audio = preprocess_audio(
-                        audio=audio, 
-                        mono=self.mono, 
-                        origin_sr=track.rate, 
-                        sr=self.sample_rate, 
-                        resample_type=self.resample_type
+                        audio=audio,
+                        mono=self.mono,
+                        origin_sr=track.rate,
+                        sr=self.sample_rate,
+                        resample_type=self.resample_type,
                     )
                     # (channels_num, audio_samples)
 
                     target_dict[source_type] = audio
                     # (channels_num, audio_samples)
 
+                # Separate.
                 input_dict = {'waveform': mixture}
 
                 sep_wavs = self.separator.separate(input_dict)
                 # sep_wavs: (target_sources_num * channels_num, audio_samples)
 
+                # Post process separation results.
                 sep_wavs = preprocess_audio(
-                    audio=sep_wavs, 
-                    mono=self.mono, 
-                    origin_sr=self.sample_rate, 
-                    sr=track.rate, 
-                    resample_type=self.resample_type
+                    audio=sep_wavs,
+                    mono=self.mono,
+                    origin_sr=self.sample_rate,
+                    sr=track.rate,
+                    resample_type=self.resample_type,
                 )
                 # sep_wavs: (target_sources_num * channels_num, audio_samples)
 
-                sep_wavs = librosa.util.fix_length(sep_wavs, size=mixture.shape[1], axis=1)
+                sep_wavs = librosa.util.fix_length(
+                    sep_wavs, size=mixture.shape[1], axis=1
+                )
                 # sep_wavs: (target_sources_num * channels_num, audio_samples)
 
                 sep_wav_dict = get_separated_wavs_from_simo_output(
@@ -248,9 +250,11 @@ class Musdb18EvaluationCallback(pl.Callback):
                 #     ...,
                 # }
 
+                # Evaluate for all target source types.
                 for source_type in self.target_source_types:
-                    # Calculate SDR using museval, input shape should be: (nsrc, nsampl, nchan)
+                    # E.g., ['vocals', 'bass', ...]
 
+                    # Calculate SDR using museval, input shape should be: (nsrc, nsampl, nchan).
                     (sdrs, _, _, _) = museval.evaluate(
                         [target_dict[source_type].T], [sep_wav_dict[source_type].T]
                     )
@@ -265,7 +269,9 @@ class Musdb18EvaluationCallback(pl.Callback):
             logging.info("-----------------------------")
             median_sdr_dict = {}
 
+            # Calculate median SDRs of all songs.
             for source_type in self.target_source_types:
+                # E.g., ['vocals', 'bass', ...]
 
                 median_sdr = np.median(
                     [
@@ -289,7 +295,7 @@ class Musdb18EvaluationCallback(pl.Callback):
             self.statistics_container.dump()
 
 
-def get_separated_wavs_from_simo_output(x, input_channels, target_source_types):
+def get_separated_wavs_from_simo_output(x, input_channels, target_source_types) -> Dict:
     r"""Get separated waveforms of target sources from a single input multiple
     output (SIMO) system.
 
@@ -316,26 +322,28 @@ def get_separated_wavs_from_simo_output(x, input_channels, target_source_types):
 class Musdb18ConditionalEvaluationCallback(pl.Callback):
     def __init__(
         self,
+        dataset_dir: str,
         model: nn.Module,
         target_source_types: str,
-        input_channels,
-        hdf5s_dir: str,
+        input_channels: int,
         split: str,
+        sample_rate: int,
         segment_samples: int,
         batch_size: int,
         device: str,
         evaluate_step_frequency: int,
-        logger,
+        logger: pl.loggers.TensorBoardLogger,
         statistics_container: StatisticsContainer,
     ):
         r"""Callback to evaluate every #save_step_frequency steps.
 
         Args:
+            dataset_dir: str
             model: nn.Module
-            target_source_types: str, e.g., ['vocals', 'bass', ...]
+            target_source_types: List[str], e.g., ['vocals', 'bass', ...]
             input_channels: int
-            hdf5s_dir, str, directory containing hdf5 files for evaluation.
             split: 'train' | 'test'
+            sample_rate: int
             segment_samples: int, length of segments to be input to a model, e.g., 44100*30
             batch_size, int, e.g., 12
             device: str, e.g., 'cuda'
@@ -346,22 +354,26 @@ class Musdb18ConditionalEvaluationCallback(pl.Callback):
         self.model = model
         self.target_source_types = target_source_types
         self.input_channels = input_channels
-        self.hdf5s_dir = hdf5s_dir
+        self.sample_rate = sample_rate
         self.split = split
         self.segment_samples = segment_samples
         self.evaluate_step_frequency = evaluate_step_frequency
         self.logger = logger
         self.statistics_container = statistics_container
+        self.mono = input_channels == 1
+        self.resample_type = "kaiser_fast"
 
-        self.hdf5_names = sorted(os.listdir(self.hdf5s_dir))
+        self.mus = musdb.DB(root=dataset_dir, subsets=[split])
+
+        error_msg = "The directory {} is empty!".format(dataset_dir)
+        assert len(self.mus) > 0, error_msg
 
         # separator
         self.separator = Separator(model, self.segment_samples, batch_size, device)
 
     @rank_zero_only
-    def on_batch_end(self, trainer: pl.Trainer, _) -> None:
+    def on_batch_end(self, trainer: pl.Trainer, _) -> NoReturn:
         r"""Evaluate separation SDRs of audio recordings."""
-
         global_step = trainer.global_step
 
         if global_step % self.evaluate_step_frequency == 0:
@@ -369,57 +381,95 @@ class Musdb18ConditionalEvaluationCallback(pl.Callback):
             sdr_dict = {}
 
             logging.info("--- Step {} ---".format(global_step))
-            logging.info("Total {} pieces for evaluation:".format(len(self.hdf5_names)))
+            logging.info("Total {} pieces for evaluation:".format(len(self.mus.tracks)))
 
             eval_time = time.time()
 
-            for hdf5_name in self.hdf5_names:
+            for track in self.mus.tracks:
 
-                hdf5_path = os.path.join(self.hdf5s_dir, hdf5_name)
-                audio_name = pathlib.Path(hdf5_name).stem
-                sdr_dict[audio_name] = {}
+                audio_name = track.name
+
+                # Get waveform of mixture.
+                mixture = track.audio.T
+                # (channels_num, audio_samples)
+
+                mixture = preprocess_audio(
+                    audio=mixture,
+                    mono=self.mono,
+                    origin_sr=track.rate,
+                    sr=self.sample_rate,
+                    resample_type=self.resample_type,
+                )
+                # (channels_num, audio_samples)
 
                 target_dict = {}
+                sdr_dict[audio_name] = {}
 
-                with h5py.File(hdf5_path, "r") as hf:
+                # Get waveform of all target source types.
+                for j, source_type in enumerate(self.target_source_types):
+                    # E.g., ['vocals', 'bass', ...]
 
-                    mixture = int16_to_float32(hf["mixture"][:])
-                    # mixture: (channels_num, audio_samples)
+                    audio = track.targets[source_type].audio.T
 
-                    for j, source_type in enumerate(self.target_source_types):
-                        # E.g., ['vocals', 'bass', ...]
+                    audio = preprocess_audio(
+                        audio=audio,
+                        mono=self.mono,
+                        origin_sr=track.rate,
+                        sr=self.sample_rate,
+                        resample_type=self.resample_type,
+                    )
+                    # (channels_num, audio_samples)
 
-                        target_dict[source_type] = int16_to_float32(hf[source_type][:])
+                    target_dict[source_type] = audio
+                    # (channels_num, audio_samples)
 
-                        condition = np.zeros(len(self.target_source_types))
-                        condition[j] = 1
-                        input_dict = {'waveform': mixture, 'condition': condition}
+                    condition = np.zeros(len(self.target_source_types))
+                    condition[j] = 1
 
-                        sep_wav = self.separator.separate(input_dict)
-                        # sep_wav: (channels_num, audio_samples)
+                    input_dict = {'waveform': mixture, 'condition': condition}
 
-                        # Calculate SDR using museval, input shape should be: (nsrc, nsampl, nchan)
-                        (sdrs, _, _, _) = museval.evaluate(
-                            [target_dict[source_type].T], [sep_wav.T]
-                        )
+                    sep_wav = self.separator.separate(input_dict)
+                    # sep_wav: (channels_num, audio_samples)
 
-                        sdr = np.nanmedian(sdrs)
-                        sdr_dict[audio_name][source_type] = sdr
+                    sep_wav = preprocess_audio(
+                        audio=sep_wav,
+                        mono=self.mono,
+                        origin_sr=self.sample_rate,
+                        sr=track.rate,
+                        resample_type=self.resample_type,
+                    )
+                    # sep_wav: (channels_num, audio_samples)
 
-                        logging.info(
-                            "{}, {}, sdr: {:.3f}".format(audio_name, source_type, sdr)
-                        )
+                    sep_wav = librosa.util.fix_length(
+                        sep_wav, size=mixture.shape[1], axis=1
+                    )
+                    # sep_wav: (target_sources_num * channels_num, audio_samples)
+
+                    # Calculate SDR using museval, input shape should be: (nsrc, nsampl, nchan)
+                    (sdrs, _, _, _) = museval.evaluate(
+                        [target_dict[source_type].T], [sep_wav.T]
+                    )
+
+                    sdr = np.nanmedian(sdrs)
+                    sdr_dict[audio_name][source_type] = sdr
+
+                    logging.info(
+                        "{}, {}, sdr: {:.3f}".format(audio_name, source_type, sdr)
+                    )
 
             logging.info("-----------------------------")
             median_sdr_dict = {}
 
+            # Calculate median SDRs of all songs.
             for source_type in self.target_source_types:
+
                 median_sdr = np.median(
                     [
                         sdr_dict[audio_name][source_type]
                         for audio_name in sdr_dict.keys()
                     ]
                 )
+
                 median_sdr_dict[source_type] = median_sdr
 
                 logging.info(

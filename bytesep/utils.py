@@ -34,7 +34,13 @@ def create_logging(log_dir, filemode):
     return logging
 
 
-def load_audio(audio_path: str, mono: bool, sample_rate: float, offset: float = 0., duration: float = None) -> np.array:
+def load_audio(
+    audio_path: str,
+    mono: bool,
+    sample_rate: float,
+    offset: float = 0.0,
+    duration: float = None,
+) -> np.array:
     r"""Load audio.
 
     Args:
@@ -42,7 +48,9 @@ def load_audio(audio_path: str, mono: bool, sample_rate: float, offset: float = 
         mono: bool
         sample_rate: float
     """
-    audio, _ = librosa.core.load(audio_path, sr=sample_rate, mono=mono, offset=offset, duration=duration)
+    audio, _ = librosa.core.load(
+        audio_path, sr=sample_rate, mono=mono, offset=offset, duration=duration
+    )
     # (audio_samples,) | (channels_num, audio_samples)
 
     if audio.ndim == 1:
@@ -72,14 +80,18 @@ def read_yaml(config_yaml):
 def check_configs_gramma(configs):
 
     input_source_types = configs['train']['input_source_types']
-    
+
     for augmentation_type in configs['train']['augmentations'].keys():
         augmentation_dict = configs['train']['augmentations'][augmentation_type]
 
         for source_type in augmentation_dict.keys():
             if source_type not in input_source_types:
-                error_msg = "The source type '{}'' in configs['train']['augmentations']['{}'] " \
-                    "must be one of input_source_types {}".format(source_type, augmentation_type, input_source_types)
+                error_msg = (
+                    "The source type '{}'' in configs['train']['augmentations']['{}'] "
+                    "must be one of input_source_types {}".format(
+                        source_type, augmentation_type, input_source_types
+                    )
+                )
                 raise Exception(error_msg)
 
 
@@ -145,10 +157,12 @@ class StatisticsContainer(object):
         self.statistics_dict = resume_statistics_dict
     '''
 
+
 def calculate_sdr(ref, est):
     s_true = ref
     s_artif = est - ref
-    sdr = 10. * (
-        np.log10(np.clip(np.mean(s_true ** 2), 1e-8, np.inf)) \
-        - np.log10(np.clip(np.mean(s_artif ** 2), 1e-8, np.inf)))
+    sdr = 10.0 * (
+        np.log10(np.clip(np.mean(s_true ** 2), 1e-8, np.inf))
+        - np.log10(np.clip(np.mean(s_artif ** 2), 1e-8, np.inf))
+    )
     return sdr

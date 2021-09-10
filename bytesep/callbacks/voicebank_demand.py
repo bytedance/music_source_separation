@@ -1,9 +1,7 @@
-import glob
 import logging
 import os
 import time
-import torch
-from typing import List
+from typing import List, NoReturn
 
 import librosa
 import numpy as np
@@ -31,10 +29,9 @@ def get_voicebank_demand_callbacks(
 
     Args:
         config_yaml: str
-        dataset_dir: str
         workspace: str
-        checkpoints_dir: str
-        statistics_dir: str
+        checkpoints_dir: str, directory to save checkpoints
+        statistics_dir: str, directory to save statistics
         logger: pl.loggers.TensorBoardLogger
         model: nn.Module
         evaluate_device: str
@@ -87,27 +84,18 @@ def get_voicebank_demand_callbacks(
     return callbacks
 
 
-def calculate_sdr(ref, est):
-    s_true = ref
-    s_artif = est - ref
-    sdr = 10. * (
-        np.log10(np.clip(np.mean(s_true ** 2), 1e-8, np.inf)) \
-        - np.log10(np.clip(np.mean(s_artif ** 2), 1e-8, np.inf)))
-    return sdr
-
-
 class EvaluationCallback(pl.Callback):
     def __init__(
         self,
         model: nn.Module,
-        input_channels,
+        input_channels: int,
         evaluation_audios_dir,
-        sample_rate,
+        sample_rate: int,
         segment_samples: int,
         batch_size: int,
         device: str,
         evaluate_step_frequency: int,
-        logger,
+        logger: pl.loggers.TensorBoardLogger,
         statistics_container: StatisticsContainer,
     ):
         r"""Callback to evaluate every #save_step_frequency steps.
@@ -115,14 +103,13 @@ class EvaluationCallback(pl.Callback):
         Args:
             model: nn.Module
             input_channels: int
-            clean_dir: str
-            noisy_dir: str
+            evaluation_audios_dir: str, directory containing audios for evaluation
             sample_rate: int
             segment_samples: int, length of segments to be input to a model, e.g., 44100*30
             batch_size, int, e.g., 12
             device: str, e.g., 'cuda'
             evaluate_step_frequency: int, evaluate every #save_step_frequency steps
-            logger: object
+            logger: pl.loggers.TensorBoardLogger
             statistics_container: StatisticsContainer
         """
         self.model = model
@@ -142,9 +129,8 @@ class EvaluationCallback(pl.Callback):
         # separator
         self.separator = Separator(model, self.segment_samples, batch_size, device)
 
-    
     @rank_zero_only
-    def on_batch_end(self, trainer: pl.Trainer, _) -> None:
+    def on_batch_end(self, trainer: pl.Trainer, _) -> NoReturn:
         r"""Evaluate losses on a few mini-batches. Losses are only used for
         observing training, and are not final F1 metrics.
         """
@@ -153,10 +139,17 @@ class EvaluationCallback(pl.Callback):
 
         if global_step % self.evaluate_step_frequency == 0:
 
-            # audio_names = sorted(glob.glob('{}/*.wav'.format(self.clean_dir)))
-            audio_names = sorted([audio_name for audio_name in sorted(os.listdir(self.clean_dir)) if audio_name.endswith('.wav')])
+            audio_names = sorted(
+                [
+                    audio_name
+                    for audio_name in sorted(os.listdir(self.clean_dir))
+                    if audio_name.endswith('.wav')
+                ]
+            )
 
-            error_str = "Directory {} does not contain audios for evaluation!".format(self.clean_dir)
+            error_str = "Directory {} does not contain audios for evaluation!".format(
+                self.clean_dir
+            )
             assert len(audio_names) > 0, error_str
 
             pesqs, csigs, cbaks, covls, ssnrs = [], [], [], [], []
@@ -178,13 +171,13 @@ class EvaluationCallback(pl.Callback):
 
                 if mixture.ndim == 1:
                     mixture = mixture[None, :]
-                # (channels, audio_length)
+                # (channels_num, audio_length)
 
+                # Separate.
                 input_dict = {'waveform': mixture}
 
-                # separate
                 sep_wav = self.separator.separate(input_dict)
-                # (channels, audio_length)
+                # (channels_num, audio_length)
 
                 # Target
                 clean, _ = librosa.core.load(
@@ -206,7 +199,6 @@ class EvaluationCallback(pl.Callback):
 
                 # Evaluate metrics
                 pesq_ = pesq(self.EVALUATION_SAMPLE_RATE, clean, sep_wav, 'wb')
-                # pesq_ = pesq(self.EVALUATION_SAMPLE_RATE, clean, sep_wav, 'nb')
 
                 (csig, cbak, covl) = pysepm.composite(
                     clean, sep_wav, self.EVALUATION_SAMPLE_RATE
@@ -224,10 +216,6 @@ class EvaluationCallback(pl.Callback):
                         n, audio_name, pesq_, csig, cbak, covl, ssnr
                     )
                 )
-                # from IPython import embed; embed(using=False); os._exit(0)
-
-                # if n == 10:
-                #     break
 
             logging.info("-----------------------------")
             logging.info('Avg PESQ: {:.3f}'.format(np.mean(pesqs)))
@@ -241,160 +229,3 @@ class EvaluationCallback(pl.Callback):
             statistics = {"pesq": np.mean(pesqs)}
             self.statistics_container.append(global_step, statistics, 'test')
             self.statistics_container.dump()
-    
-
-    
-    # @rank_zero_only
-    # def on_batch_end(self, trainer: pl.Trainer, _) -> None:
-    #     r"""Evaluate losses on a few mini-batches. Losses are only used for
-    #     observing training, and are not final F1 metrics.
-    #     """
-
-    #     global_step = trainer.global_step
-
-    #     if global_step % self.evaluate_step_frequency == 0:
-
-    #         # audio_names = sorted(glob.glob('{}/*.wav'.format(self.clean_dir)))
-    #         audio_names = sorted([audio_name for audio_name in sorted(os.listdir(self.clean_dir)) if audio_name.endswith('.wav')])
-
-    #         error_str = "Directory {} does not contain audios for evaluation!".format(self.clean_dir)
-    #         assert len(audio_names) > 0, error_str
-
-    #         pesqs, csigs, cbaks, covls, ssnrs = [], [], [], [], []
-
-    #         logging.info("--- Step {} ---".format(global_step))
-    #         logging.info("Total {} pieces for evaluation:".format(len(audio_names)))
-
-    #         eval_time = time.time()
-
-    #         for n, audio_name in enumerate(audio_names):
-    #             # print(torch.sum(torch.stack([torch.sum(torch.abs(p)) for p in self.model.parameters()])))
-    #             # from IPython import embed; embed(using=False); os._exit(0)
-    #             # print(torch.sum(self.model.decoder_block6.bn1.weight))
-    #             # print(torch.sum(self.model.bn0.running_mean))
-
-    #             # self.model.train()
-    #             # self.model.eval()
-    #             # output_dict = self.model({'waveform': torch.ones(1, 1, 44100).to('cuda')})
-    #             # print('-', torch.sum(output_dict['waveform']))
-    #             # output_dict = self.model({'waveform': torch.ones(1, 1, 44100).to('cuda')})
-    #             # print('-', torch.sum(output_dict['waveform']))
-    #             # self.model.train()
-
-                
-    #             h5_path = '/home/tiger/my_code_2019.12-/python/bytesep/workspaces/music_source_separation/hdf5s/voicebank-demand/sr=44100_ch=1/train/p226_002.h5'
-
-    #             import h5py
-    #             from music_source_separation.utils import int16_to_float32
-    #             hf = h5py.File(h5_path, 'r')
-    #             clean = int16_to_float32(hf['speech'][0, :])
-    #             noise = int16_to_float32(hf['noise'][0, :])
-    #             mixture = int16_to_float32(hf['speech'][0, :]) + int16_to_float32(hf['noise'][0, :])
-                
-    #             '''
-    #             if n == 1:
-    #                 # Load audio.
-    #                 clean_path = os.path.join(self.clean_dir, audio_name)
-    #                 mixture_path = os.path.join(self.noisy_dir, audio_name)
-
-    #                 mixture2, _ = librosa.core.load(mixture_path, sr=44100, mono=True)
-    #                 clean2, _ = librosa.core.load(clean_path, sr=44100, mono=True)
-
-    #                 from bytesep.utils import int16_to_float32, float32_to_int16
-    #                 noise2 = int16_to_float32(float32_to_int16(mixture2 - clean2))
-    #                 clean2 = int16_to_float32(float32_to_int16(clean2))
-                    
-    #                 mixture2 = clean2 + noise2
-
-    #                 # from IPython import embed; embed(using=False); os._exit(0)
-    #                 # import soundfile
-    #                 # soundfile.write(file='_zz1.wav', data=clean, samplerate=44100)
-    #                 # soundfile.write(file='_zz2.wav', data=clean2, samplerate=44100)
-
-    #                 mixture = mixture2
-    #                 clean = clean2
-    #             '''
-
-    #             '''    
-    #             # Load audio.
-    #             clean_path = os.path.join(self.clean_dir, audio_name)
-    #             mixture_path = os.path.join(self.noisy_dir, audio_name)
-
-    #             mixture2, _ = librosa.core.load(mixture_path, sr=44100, mono=True)
-    #             clean2, _ = librosa.core.load(clean_path, sr=44100, mono=True)
-
-    #             from IPython import embed; embed(using=False); os._exit(0)
-    #             # import soundfile
-    #             # soundfile.write(file='_zz1.wav', data=clean, samplerate=44100)
-    #             # soundfile.write(file='_zz2.wav', data=clean2, samplerate=44100)
-
-    #             mixture = mixture2
-    #             clean = clean2
-    #             '''
-
-                    
-
-    #             # Target
-    #             # clean, _ = librosa.core.load(clean_path, sr=16000, mono=True)
-
-    #             # mixture = librosa.util.fix_length(mixture, size=44100 * 3, axis=0)
-
-    #             if mixture.ndim == 1:
-    #                 mixture = mixture[None, None, :]
-    #             # (channels, audio_length)
-
-    #             # if n == 1:
-    #             #     from IPython import embed; embed(using=False); os._exit(0)
-    #             #     import soundfile
-    #             #     soundfile.write(file='_zz.wav', data=mixture[0, 0], samplerate=44100)
-                
-    #             # random_state = np.random.RandomState(1234)
-    #             # input_dict = {'waveform': torch.Tensor(random_state.uniform(-0.1, 0.1, (1, 1, 44100 * 3))).to('cuda')}
-    #             input_dict = {'waveform': torch.Tensor(mixture).to('cuda')}
-    #             # input_dict = {'waveform': torch.ones(1, 1, 44100 * 3).to('cuda')}
-    #             # from IPython import embed; embed(using=False); os._exit(0)
-
-    #             self.model.eval()
-    #             # self.model.train()
-    #             output_dict = self.model(input_dict)
-    #             # print(torch.sum(torch.abs(torch.Tensor(mixture).to('cuda'))))
-    #             # print(torch.sum(torch.abs(output_dict['waveform'])))
-
-    #             # print(torch.sum(torch.abs(self.model.after_conv2.weight)))
-                
-    #             sep_wav = output_dict['waveform'].data.cpu().numpy()[0, 0]
-    #             # print(np.sum(np.abs(sep_wav)))
-
-    #             sep_wav = librosa.resample(sep_wav, orig_sr=44100, target_sr=16000)
-
-    #             # sep_wav = librosa.util.fix_length(sep_wav, size=44100 * 3, axis=0)
-    #             # (channels, audio_length)
-
-    #             # Evaluate metrics
-    #             clean = librosa.resample(clean, orig_sr=44100, target_sr=16000)
-
-    #             pesq_ = pesq(16000, clean, sep_wav, 'wb')
-    #             # pesq_ = pesq(self.EVALUATION_SAMPLE_RATE, clean, sep_wav, 'nb')
-    #             print(pesq_)
-
-    #             sdr = calculate_sdr(clean, sep_wav)
-    #             print('=== SDR', sdr)
-
-    #             # from IPython import embed; embed(using=False); os._exit(0)
-                
-    #             if n == 5:
-    #                 break
-
-    #         logging.info("-----------------------------")
-    #         logging.info('Avg PESQ: {:.3f}'.format(np.mean(pesqs)))
-    #         logging.info('Avg CSIG: {:.3f}'.format(np.mean(csigs)))
-    #         logging.info('Avg CBAK: {:.3f}'.format(np.mean(cbaks)))
-    #         logging.info('Avg COVL: {:.3f}'.format(np.mean(covls)))
-    #         logging.info('Avg SSNR: {:.3f}'.format(np.mean(ssnrs)))
-
-    #         logging.info("Evlauation time: {:.3f}".format(time.time() - eval_time))
-
-    #         statistics = {"pesq": np.mean(pesqs)}
-    #         self.statistics_container.append(global_step, statistics, 'test')
-    #         self.statistics_container.dump()
-    

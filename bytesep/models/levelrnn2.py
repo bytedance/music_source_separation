@@ -21,29 +21,29 @@ from bytesep.models.pytorch_modules import (
 
 
 def init_gru(rnn):
-    """Initialize a GRU layer. """
-    
+    """Initialize a GRU layer."""
+
     def _concat_init(tensor, init_funcs):
         (length, fan_out) = tensor.shape
         fan_in = length // len(init_funcs)
-    
+
         for (i, init_func) in enumerate(init_funcs):
             init_func(tensor[i * fan_in : (i + 1) * fan_in, :])
-        
+
     def _inner_uniform(tensor):
         fan_in = nn.init._calculate_correct_fan(tensor, 'fan_in')
         nn.init.uniform_(tensor, -math.sqrt(3 / fan_in), math.sqrt(3 / fan_in))
-    
+
     for i in range(rnn.num_layers):
         _concat_init(
             getattr(rnn, 'weight_ih_l{}'.format(i)),
-            [_inner_uniform, _inner_uniform, _inner_uniform]
+            [_inner_uniform, _inner_uniform, _inner_uniform],
         )
         torch.nn.init.constant_(getattr(rnn, 'bias_ih_l{}'.format(i)), 0)
 
         _concat_init(
             getattr(rnn, 'weight_hh_l{}'.format(i)),
-            [_inner_uniform, _inner_uniform, nn.init.orthogonal_]
+            [_inner_uniform, _inner_uniform, nn.init.orthogonal_],
         )
         torch.nn.init.constant_(getattr(rnn, 'bias_hh_l{}'.format(i)), 0)
 
@@ -56,11 +56,13 @@ class EncoderBlock(nn.Module):
         self.pool_size = pool_size
 
         self.rnn = nn.GRU(
-            input_size=in_channels, 
-            hidden_size=out_channels // 2, 
-            num_layers=1, bias=True, 
-            batch_first=True, dropout=0., 
-            bidirectional=True
+            input_size=in_channels,
+            hidden_size=out_channels // 2,
+            num_layers=1,
+            bias=True,
+            batch_first=True,
+            dropout=0.0,
+            bidirectional=True,
         )
 
         self.init_weights()
@@ -81,26 +83,33 @@ class EncoderBlock(nn.Module):
         """
         x = input_tensor
         origin_len = x.shape[2]
-        pad_len = (int(np.ceil(x.shape[2] / self.segment_samples)) * self.segment_samples - origin_len)
-        
+        pad_len = (
+            int(np.ceil(x.shape[2] / self.segment_samples)) * self.segment_samples
+            - origin_len
+        )
+
         x = F.pad(x, pad=(0, pad_len))
-        
+
         batch_size, channels_num, total_samples = x.shape
         segments_num = total_samples // self.segment_samples
-        
+
         x = x.reshape(batch_size, channels_num, segments_num, self.segment_samples)
 
-        x = x.permute(0, 2, 3, 1)   # (batch_size, segments_num, segment_samples, channels_num)
+        x = x.permute(
+            0, 2, 3, 1
+        )  # (batch_size, segments_num, segment_samples, channels_num)
         x = x.reshape(batch_size * segments_num, self.segment_samples, channels_num)
 
         x, _ = self.rnn(x)  # (batch_size * segments_num, segment_samples, channels_num)
         channels_num = x.shape[-1]
-        
+
         x = x.reshape(batch_size, segments_num, self.segment_samples, channels_num)
-        x = x.permute(0, 3, 1, 2)   # (batch_size, channels_num, segments_num, segment_samples)
+        x = x.permute(
+            0, 3, 1, 2
+        )  # (batch_size, channels_num, segments_num, segment_samples)
 
         x = x.reshape(batch_size, channels_num, total_samples)
-        x = x[:, :, 0 : origin_len]
+        x = x[:, :, 0:origin_len]
 
         x_pool = F.avg_pool1d(x, kernel_size=self.pool_size)
 
@@ -127,11 +136,13 @@ class DecoderBlock(nn.Module):
         self.bn1 = nn.BatchNorm1d(out_channels, momentum=momentum)
 
         self.rnn = nn.GRU(
-            input_size=out_channels * 2, 
-            hidden_size=out_channels // 2, 
-            num_layers=1, bias=True, 
-            batch_first=True, dropout=0., 
-            bidirectional=True
+            input_size=out_channels * 2,
+            hidden_size=out_channels // 2,
+            num_layers=1,
+            bias=True,
+            batch_first=True,
+            dropout=0.0,
+            bidirectional=True,
         )
 
         self.init_weights()
@@ -151,32 +162,41 @@ class DecoderBlock(nn.Module):
         Returns:
             output_tensor: (batch_size, out_feature_maps, time_steps, freq_bins)
         """
-        
+
         x = F.leaky_relu_(self.bn1(self.conv1(input_tensor)), negative_slope=0.01)
 
-        x = torch.cat((x, concat_tensor), dim=1)    # (batch_size, channels_num, total_samples)
+        x = torch.cat(
+            (x, concat_tensor), dim=1
+        )  # (batch_size, channels_num, total_samples)
 
         origin_len = x.shape[2]
-        pad_len = (int(np.ceil(x.shape[2] / self.segment_samples)) * self.segment_samples - origin_len)
-        
+        pad_len = (
+            int(np.ceil(x.shape[2] / self.segment_samples)) * self.segment_samples
+            - origin_len
+        )
+
         x = F.pad(x, pad=(0, pad_len))
 
         batch_size, channels_num, total_samples = x.shape
         segments_num = total_samples // self.segment_samples
 
         x = x.reshape(batch_size, channels_num, segments_num, self.segment_samples)
-        x = x.permute(0, 2, 3, 1)   # (batch_size, segments_num, segment_samples, channels_num)
+        x = x.permute(
+            0, 2, 3, 1
+        )  # (batch_size, segments_num, segment_samples, channels_num)
         x = x.reshape(batch_size * segments_num, self.segment_samples, channels_num)
 
         x, _ = self.rnn(x)  # (batch_size * segments_num, segment_samples, channels_num)
         channels_num = x.shape[-1]
 
         x = x.reshape(batch_size, segments_num, self.segment_samples, channels_num)
-        x = x.permute(0, 3, 1, 2)   # (batch_size, channels_num, segments_num, segment_samples)
+        x = x.permute(
+            0, 3, 1, 2
+        )  # (batch_size, channels_num, segments_num, segment_samples)
 
         x = x.reshape(batch_size, channels_num, total_samples)
-        x = x[:, :, 0 : origin_len]
-        
+        x = x[:, :, 0:origin_len]
+
         return x
 
 
@@ -190,22 +210,52 @@ class LevelRNN2(nn.Module, Base):
 
         self.downsample_ratio = 4 ** 6
 
-        self.encoder_block1 = EncoderBlock(in_channels=input_channels, out_channels=16, segment_samples=10, pool_size=4)
-        self.encoder_block2 = EncoderBlock(in_channels=16, out_channels=32, segment_samples=10, pool_size=4)
-        self.encoder_block3 = EncoderBlock(in_channels=32, out_channels=64, segment_samples=10, pool_size=4)
-        self.encoder_block4 = EncoderBlock(in_channels=64, out_channels=128, segment_samples=10, pool_size=4)
-        self.encoder_block5 = EncoderBlock(in_channels=128, out_channels=256, segment_samples=10, pool_size=4)
-        self.encoder_block6 = EncoderBlock(in_channels=256, out_channels=512, segment_samples=10, pool_size=4)
+        self.encoder_block1 = EncoderBlock(
+            in_channels=input_channels, out_channels=16, segment_samples=10, pool_size=4
+        )
+        self.encoder_block2 = EncoderBlock(
+            in_channels=16, out_channels=32, segment_samples=10, pool_size=4
+        )
+        self.encoder_block3 = EncoderBlock(
+            in_channels=32, out_channels=64, segment_samples=10, pool_size=4
+        )
+        self.encoder_block4 = EncoderBlock(
+            in_channels=64, out_channels=128, segment_samples=10, pool_size=4
+        )
+        self.encoder_block5 = EncoderBlock(
+            in_channels=128, out_channels=256, segment_samples=10, pool_size=4
+        )
+        self.encoder_block6 = EncoderBlock(
+            in_channels=256, out_channels=512, segment_samples=10, pool_size=4
+        )
 
-        self.decoder_block1 = DecoderBlock(in_channels=512, out_channels=512, segment_samples=10, upsample_size=4)
-        self.decoder_block2 = DecoderBlock(in_channels=512, out_channels=256, segment_samples=10, upsample_size=4)
-        self.decoder_block3 = DecoderBlock(in_channels=256, out_channels=128, segment_samples=10, upsample_size=4)
-        self.decoder_block4 = DecoderBlock(in_channels=128, out_channels=64, segment_samples=10, upsample_size=4)
-        self.decoder_block5 = DecoderBlock(in_channels=64, out_channels=32, segment_samples=10, upsample_size=4)
-        self.decoder_block6 = DecoderBlock(in_channels=32, out_channels=16, segment_samples=10, upsample_size=4)
+        self.decoder_block1 = DecoderBlock(
+            in_channels=512, out_channels=512, segment_samples=10, upsample_size=4
+        )
+        self.decoder_block2 = DecoderBlock(
+            in_channels=512, out_channels=256, segment_samples=10, upsample_size=4
+        )
+        self.decoder_block3 = DecoderBlock(
+            in_channels=256, out_channels=128, segment_samples=10, upsample_size=4
+        )
+        self.decoder_block4 = DecoderBlock(
+            in_channels=128, out_channels=64, segment_samples=10, upsample_size=4
+        )
+        self.decoder_block5 = DecoderBlock(
+            in_channels=64, out_channels=32, segment_samples=10, upsample_size=4
+        )
+        self.decoder_block6 = DecoderBlock(
+            in_channels=32, out_channels=16, segment_samples=10, upsample_size=4
+        )
 
-        self.after_fc = nn.Conv1d(in_channels=16, out_channels=2, kernel_size=1, 
-            stride=1, padding=0, bias=True)
+        self.after_fc = nn.Conv1d(
+            in_channels=16,
+            out_channels=2,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+            bias=True,
+        )
 
         self.init_weights()
 
@@ -239,7 +289,7 @@ class LevelRNN2(nn.Module, Base):
             int(np.ceil(x.shape[2] / self.downsample_ratio)) * self.downsample_ratio
             - origin_len
         )
-        
+
         x = F.pad(x, pad=(0, pad_len))
 
         # UNet

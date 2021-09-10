@@ -66,8 +66,10 @@ def create_indexes(args) -> NoReturn:
 
     random_state = np.random.RandomState(1234)
     audioset_samples = 10 * 32000
-    
-    audioset_indexes_hdf5_path = configs[split]["source_types"]['audioset']['indexes_hdf5_path']
+
+    audioset_indexes_hdf5_path = configs[split]["source_types"]['audioset'][
+        'indexes_hdf5_path'
+    ]
     # audioset_indexes_hdf5_path = "/home/tiger/workspaces/audioset_tagging/hdf5s/indexes/balanced_train.h5"
 
     source_type = 'audioset'
@@ -81,18 +83,20 @@ def create_indexes(args) -> NoReturn:
             if n % 100 == 0:
                 print("{} / {}".format(n, audios_num))
 
-            if np.sum(hf['target'][n, 0 : 6]) == 0:
+            if np.sum(hf['target'][n, 0:6]) == 0:
                 hdf5_path = hf['hdf5_path'][n].decode()
                 index_in_hdf5 = hf['index_in_hdf5'][n]
                 key = 'audioset'
-                begin_sample = int(random_state.uniform(0, audioset_samples - segment_samples))
+                begin_sample = int(
+                    random_state.uniform(0, audioset_samples - segment_samples)
+                )
                 end_sample = begin_sample + segment_samples
 
                 # indexes_dict[source_type].append(
                 #     [hdf5_path, key, start_sample, start_sample + segment_samples]
                 # )
                 meta = {
-                    'hdf5_path': hdf5_path, 
+                    'hdf5_path': hdf5_path,
                     'index_in_hdf5': index_in_hdf5,
                     'key': key,
                     'begin_sample': begin_sample,
@@ -139,7 +143,7 @@ def create_indexes(args) -> NoReturn:
 
                         # start_sample += hop_samples
                         meta = {
-                            'hdf5_path': hdf5_path, 
+                            'hdf5_path': hdf5_path,
                             'key': key,
                             'begin_sample': begin_sample,
                             'end_sample': begin_sample + segment_samples,
@@ -154,13 +158,12 @@ def create_indexes(args) -> NoReturn:
                         #     [hdf5_path, key, start_sample, start_sample + segment_samples]
                         # )
                         meta = {
-                            'hdf5_path': hdf5_path, 
+                            'hdf5_path': hdf5_path,
                             'key': key,
                             'begin_sample': 0,
                             'end_sample': segment_samples,
                         }
                         indexes_dict[source_type].append(meta)
-
 
         print(
             "Total indexes for {}: {}".format(

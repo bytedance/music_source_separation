@@ -19,7 +19,10 @@ def inference(args):
 
     # Need to use torch.distributed if models contain inplace_abn.abn.InPlaceABNSync.
     import torch.distributed as dist
-    dist.init_process_group('gloo', init_method='file:///tmp/somefile', rank=0, world_size=1)
+
+    dist.init_process_group(
+        'gloo', init_method='file:///tmp/somefile', rank=0, world_size=1
+    )
 
     # Arguments & parameters
     config_yaml = args.config_yaml
@@ -45,7 +48,7 @@ def inference(args):
 
     # Get model class.
     Model = get_model_class(model_type)
-    
+
     # Create model.
     model = Model(input_channels=input_channels, target_sources_num=target_sources_num)
 
@@ -57,7 +60,12 @@ def inference(args):
     model.to(device)
 
     # Create separator.
-    separator = Separator(model=model, segment_samples=segment_samples, batch_size=batch_size, device=device)
+    separator = Separator(
+        model=model,
+        segment_samples=segment_samples,
+        batch_size=batch_size,
+        device=device,
+    )
 
     audio_names = sorted(os.listdir(audios_dir))
 
@@ -86,7 +94,9 @@ def inference(args):
 
         soundfile.write(file='_zz.wav', data=sep_wav.T, samplerate=sample_rate)
 
-        output_path = os.path.join(output_dir, '{}.mp3'.format(pathlib.Path(audio_name).stem))
+        output_path = os.path.join(
+            output_dir, '{}.mp3'.format(pathlib.Path(audio_name).stem)
+        )
         os.system('ffmpeg -y -loglevel panic -i _zz.wav "{}"'.format(output_path))
         print('Write out to {}'.format(output_path))
 

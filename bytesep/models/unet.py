@@ -203,7 +203,9 @@ class UNet(nn.Module, Base):
 
         self.subbands_num = 1
 
-        assert self.subbands_num == 1, "Using subbands_num > 1 on spectrogram \
+        assert (
+            self.subbands_num == 1
+        ), "Using subbands_num > 1 on spectrogram \
             will lead to unexpected performance sometimes. Suggest to use \
             subband method on waveform."
 
@@ -329,7 +331,7 @@ class UNet(nn.Module, Base):
             activation=activation,
             momentum=momentum,
         )
-        
+
         self.decoder_block6 = DecoderBlock(
             in_channels=64,
             out_channels=32,
@@ -358,7 +360,7 @@ class UNet(nn.Module, Base):
             padding=(0, 0),
             bias=True,
         )
-        
+
         self.init_weights()
 
     def init_weights(self):
@@ -522,7 +524,7 @@ class UNet(nn.Module, Base):
 
         # Recover shape
         x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 1024 -> 1025.
-        
+
         x = x[:, :, 0:origin_len, :]
         # (batch_size, target_sources_num * input_channles * self.K, T, F)
 

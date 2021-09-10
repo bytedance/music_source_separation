@@ -12,17 +12,30 @@ train:
     segment_seconds: 3.0
     model_type: UNet
     loss_type: l1_wav
+    optimizer_type: Adam
     mini_data: False
-    mixaudio:
-        speech: 1
-        noise: 1
-    augmentation:
-        pitch_shift: 0
+    augmentations:
+        mixaudio:
+            speech: 1
+            noise: 1
+        pitch_shift:
+            speech: 0
+            noise: 0
         magnitude_scale:
-            lower_db: 0
-            higher_db: 0
+            speech:
+                lower_db: 0
+                higher_db: 0
+            noise:
+                lower_db: 0
+                higher_db: 0
+        swap_channel:
+            speech: False
+            noise: False
+        flip_axis:
+            speech: False
+            noise: False
     batch_data_preprocessor: BasicBatchDataPreprocessor
-    evaluation_callback: Musdb18EvaluationCallback
+    evaluation_callback: Default
     learning_rate: 1e-3
     batch_size: 16
     precision: 32

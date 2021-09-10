@@ -4,14 +4,14 @@ from fast_transformers.builders import TransformerEncoderBuilder
 import torch.nn.functional as F
 
 
-class TTnetNoTransformer(nn.Module):
+class TTnet(nn.Module):
     def __init__(
         self,
         input_channels,
         target_sources_num,
         depth=6,
     ):
-        super(TTnetNoTransformer, self).__init__()
+        super(TTnet, self).__init__()
 
         in_channels = input_channels
         channels = 64
@@ -104,6 +104,9 @@ class TTnetNoTransformer(nn.Module):
     ):
 
         audio_input = input_dict['waveform']
+        # from IPython import embed; embed(using=False); os._exit(0)
+        # import soundfile
+        # soundfile.write(file='_zz.wav', data=audio_input.data.cpu().numpy()[1, 0], samplerate=44100)
 
         # input shape: (1, 2, 442368)
         x = F.pad(audio_input, (0, 1368), "constant", 0)
@@ -145,16 +148,21 @@ class TransformerEncoderLayer(nn.Module):
         self.stride = stride
         self.padding = padding
 
-        # self.unfold = nn.Unfold(kernel_size=(self.kernel_size, 1), stride=(self.stride, 1), padding=(self.padding, 0), )
+        self.unfold = nn.Unfold(
+            kernel_size=(self.kernel_size, 1),
+            stride=(self.stride, 1),
+            padding=(self.padding, 0),
+        )
 
-        # self.trans = TransformerEncoderBuilder.from_kwargs(
-        #     n_layers=1,
-        #     n_heads=32,
-        #     query_dimensions=self.out_channel // 32,
-        #     value_dimensions=self.out_channel // 32,
-        #     feed_forward_dimensions=self.out_channel * 4,
-        #     attention_type="linear").get()
-        # self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.out_channel))
+        self.trans = TransformerEncoderBuilder.from_kwargs(
+            n_layers=1,
+            n_heads=32,
+            query_dimensions=self.out_channel // 32,
+            value_dimensions=self.out_channel // 32,
+            feed_forward_dimensions=self.out_channel * 4,
+            attention_type="linear",
+        ).get()
+        self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.out_channel))
 
         self.cnn = nn.Conv1d(
             self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2
@@ -163,22 +171,23 @@ class TransformerEncoderLayer(nn.Module):
     def forward(self, x):
         in_channel = x.size()[1]
         x = self.cnn(x)
+        x = x.unsqueeze(-1)
+        x = self.unfold(x)
+        bs, _, num_packs = x.size()
+        x = x.view(bs, self.out_channel, self.kernel_size, num_packs).permute(
+            0, 3, 2, 1
+        )
+        x = x.reshape(bs * num_packs, self.kernel_size, self.out_channel)
 
-        # x = x.unsqueeze(-1)
-        # x = self.unfold(x)
-        # bs, _, num_packs = x.size()
-        # x = x.view(bs, self.out_channel, self.kernel_size, num_packs).permute(0, 3, 2, 1)
-        # x = x.reshape(bs * num_packs, self.kernel_size, self.out_channel)
-
-        # # -------------
-        # x = x + self.pos
-        # x = self.trans(x)
-        # # -------------
-        # x = x.reshape(bs, num_packs * self.kernel_size, self.out_channel)
-        # # x = F.max_pool2d(x, kernel_size=(self.kernel_size, 1)).squeeze(1)  # (110592, 16)
-        # # x = x.view(bs, num_packs, self.out_channel, )  # (1, 110592, 16)
-        # #
-        # x = x.transpose(1, 2)  # (1, 16, 110592)
+        # -------------
+        x = x + self.pos
+        x = self.trans(x)
+        # -------------
+        x = x.reshape(bs, num_packs * self.kernel_size, self.out_channel)
+        # x = F.max_pool2d(x, kernel_size=(self.kernel_size, 1)).squeeze(1)  # (110592, 16)
+        # x = x.view(bs, num_packs, self.out_channel, )  # (1, 110592, 16)
+        #
+        x = x.transpose(1, 2)  # (1, 16, 110592)
 
         return x
 
@@ -199,39 +208,42 @@ class TransformerDecoderLayer(nn.Module):
         self.stride = stride
         self.padding = padding
 
-        # self.unfold = nn.Unfold(kernel_size=(self.kernel_size, 1), stride=(self.stride, 1), padding=(self.padding, 0), )
+        self.unfold = nn.Unfold(
+            kernel_size=(self.kernel_size, 1),
+            stride=(self.stride, 1),
+            padding=(self.padding, 0),
+        )
 
-        # self.trans = TransformerEncoderBuilder.from_kwargs(
-        #     n_layers=1,
-        #     n_heads=32,
-        #     query_dimensions=self.in_channel // 32,
-        #     value_dimensions=self.in_channel // 32,
-        #     feed_forward_dimensions=self.in_channel * 4,
-        #     attention_type="linear").get()
-        # self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.in_channel))
+        self.trans = TransformerEncoderBuilder.from_kwargs(
+            n_layers=1,
+            n_heads=32,
+            query_dimensions=self.in_channel // 32,
+            value_dimensions=self.in_channel // 32,
+            feed_forward_dimensions=self.in_channel * 4,
+            attention_type="linear",
+        ).get()
+        self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.in_channel))
 
         self.t_cnn = nn.ConvTranspose1d(
             self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2
         )
 
     def forward(self, x):
-
-        # in_channel = x.size()[1]
-        # x = x.unsqueeze(-1)
-        # x = self.unfold(x)
-        # bs, _, num_packs = x.size()
-        # x = x.view(bs, self.in_channel, self.kernel_size, num_packs).permute(0, 3, 2, 1)
-        # x = x.reshape(bs * num_packs, self.kernel_size, self.in_channel)
-        # # -------------
-        # x = x + self.pos
-        # x = self.trans(x)
-        # # -------------
-        # x = x.reshape(bs, num_packs * self.kernel_size, self.in_channel)
-        # # x = F.max_pool2d(x, kernel_size=(self.kernel_size, 1)).squeeze(1)  # (110592, 16)
-        # # x = x.view(bs, num_packs, self.out_channel, )  # (1, 110592, 16)
-        # #
-        # x = x.transpose(1, 2)  # (1, 16, 110592)
-        # from IPython import embed; embed(using=False); os._exit(0)
+        in_channel = x.size()[1]
+        x = x.unsqueeze(-1)
+        x = self.unfold(x)
+        bs, _, num_packs = x.size()
+        x = x.view(bs, self.in_channel, self.kernel_size, num_packs).permute(0, 3, 2, 1)
+        x = x.reshape(bs * num_packs, self.kernel_size, self.in_channel)
+        # -------------
+        x = x + self.pos
+        x = self.trans(x)
+        # -------------
+        x = x.reshape(bs, num_packs * self.kernel_size, self.in_channel)
+        # x = F.max_pool2d(x, kernel_size=(self.kernel_size, 1)).squeeze(1)  # (110592, 16)
+        # x = x.view(bs, num_packs, self.out_channel, )  # (1, 110592, 16)
+        #
+        x = x.transpose(1, 2)  # (1, 16, 110592)
         x = self.t_cnn(x)
 
         return x

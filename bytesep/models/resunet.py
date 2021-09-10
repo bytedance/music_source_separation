@@ -15,8 +15,7 @@ from bytesep.models.pytorch_modules import (
 
 class ConvBlockRes(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, activation, momentum):
-        r"""Residual block.
-        """
+        r"""Residual block."""
         super(ConvBlockRes, self).__init__()
 
         self.activation = activation
@@ -25,19 +24,34 @@ class ConvBlockRes(nn.Module):
         self.bn1 = nn.BatchNorm2d(in_channels, momentum=momentum)
         self.bn2 = nn.BatchNorm2d(out_channels, momentum=momentum)
 
-        self.conv1 = nn.Conv2d(in_channels=in_channels, 
-                              out_channels=out_channels,
-                              kernel_size=kernel_size, stride=(1, 1), 
-                              dilation=(1, 1), padding=padding, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=(1, 1),
+            dilation=(1, 1),
+            padding=padding,
+            bias=False,
+        )
 
-        self.conv2 = nn.Conv2d(in_channels=out_channels, 
-                              out_channels=out_channels,
-                              kernel_size=kernel_size, stride=(1, 1), 
-                              dilation=(1, 1), padding=padding, bias=False)
+        self.conv2 = nn.Conv2d(
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=(1, 1),
+            dilation=(1, 1),
+            padding=padding,
+            bias=False,
+        )
 
         if in_channels != out_channels:
-            self.shortcut = nn.Conv2d(in_channels=in_channels, 
-                out_channels=out_channels, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0))
+            self.shortcut = nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=(1, 1),
+                stride=(1, 1),
+                padding=(0, 0),
+            )
 
             self.is_shortcut = True
         else:
@@ -66,15 +80,24 @@ class ConvBlockRes(nn.Module):
 
 
 class EncoderBlockRes4B(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, downsample, activation, momentum):
-        r"""Encoder block, contains 8 convolutional layers.
-        """
+    def __init__(
+        self, in_channels, out_channels, kernel_size, downsample, activation, momentum
+    ):
+        r"""Encoder block, contains 8 convolutional layers."""
         super(EncoderBlockRes4B, self).__init__()
 
-        self.conv_block1 = ConvBlockRes(in_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block2 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block3 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block4 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
+        self.conv_block1 = ConvBlockRes(
+            in_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block2 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block3 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block4 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
         self.downsample = downsample
 
     def forward(self, x):
@@ -87,22 +110,38 @@ class EncoderBlockRes4B(nn.Module):
 
 
 class DecoderBlockRes4B(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, upsample, activation, momentum):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, upsample, activation, momentum
+    ):
         r"""Decoder block, contains 1 transpose convolutional and 8 convolutional layers."""
         super(DecoderBlockRes4B, self).__init__()
         self.kernel_size = kernel_size
         self.stride = upsample
         self.activation = activation
 
-        self.conv1 = torch.nn.ConvTranspose2d(in_channels=in_channels, 
-            out_channels=out_channels, kernel_size=self.stride, stride=self.stride, 
-            padding=(0, 0), bias=False, dilation=(1, 1))
+        self.conv1 = torch.nn.ConvTranspose2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=self.stride,
+            stride=self.stride,
+            padding=(0, 0),
+            bias=False,
+            dilation=(1, 1),
+        )
 
         self.bn1 = nn.BatchNorm2d(in_channels, momentum=momentum)
-        self.conv_block2 = ConvBlockRes(out_channels * 2, out_channels, kernel_size, activation, momentum)
-        self.conv_block3 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block4 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
-        self.conv_block5 = ConvBlockRes(out_channels, out_channels, kernel_size, activation, momentum)
+        self.conv_block2 = ConvBlockRes(
+            out_channels * 2, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block3 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block4 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
+        self.conv_block5 = ConvBlockRes(
+            out_channels, out_channels, kernel_size, activation, momentum
+        )
 
         self.init_weights()
 
@@ -462,7 +501,7 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         x11 = self.decoder_block5(x10, x2)  # (bs, 64, T / 2, F / 2)
         x12 = self.decoder_block6(x11, x1)  # (bs, 32, T, F)
         (x, _) = self.after_conv_block1(x12)  # (bs, 32, T, F)
-        
+
         x = self.after_conv2(x)  # (bs, channels * 3, T, F)
         # (batch_size, input_channles * subbands_num * targets_num * k, T, F')
 
@@ -474,7 +513,7 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         x = x[:, :, 0:origin_len, :]  # (bs, feature_maps, time_steps, freq_bins)
 
         audio_length = mixtures.shape[2]
-        
+
         separated_audio = self.feature_maps_to_wav(x, mag, sin_in, cos_in, audio_length)
         # separated_audio: (batch_size, target_sources_num * input_channels, segments_num)
 

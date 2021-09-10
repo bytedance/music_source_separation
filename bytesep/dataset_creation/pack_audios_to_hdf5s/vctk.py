@@ -111,18 +111,14 @@ if __name__ == "__main__":
         required=True,
         help="Directory of the VCTK dataset.",
     )
-    parser.add_argument(
-        "--split", type=str, required=True, choices=["train", "test"]
-    )
+    parser.add_argument("--split", type=str, required=True, choices=["train", "test"])
     parser.add_argument(
         "--hdf5s_dir",
         type=str,
         required=True,
         help="Directory to write out hdf5 files.",
     )
-    parser.add_argument(
-        "--sample_rate", type=int, required=True, help="Sample rate."
-    )
+    parser.add_argument("--sample_rate", type=int, required=True, help="Sample rate.")
     parser.add_argument(
         "--channels", type=int, required=True, help="Use 1 for mono, 2 for stereo."
     )
@@ -130,5 +126,5 @@ if __name__ == "__main__":
     # Parse arguments.
     args = parser.parse_args()
 
-    # Pack audios into hdf5 files.    
+    # Pack audios into hdf5 files.
     pack_audios_to_hdf5s(args)

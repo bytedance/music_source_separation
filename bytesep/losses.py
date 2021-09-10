@@ -36,12 +36,12 @@ class L1_Wav_L1_Sp(nn.Module, Base):
         )
 
     def __call__(self, output, target, **kwargs):
-        
+
         # wav_loss = l1_wav(output, target)
 
         sp_loss = l1(
-            self.wav_to_spectrogram(output, eps=1e-8), 
-            self.wav_to_spectrogram(target, eps=1e-8)
+            self.wav_to_spectrogram(output, eps=1e-8),
+            self.wav_to_spectrogram(target, eps=1e-8),
         )
 
         # sp_loss /= math.sqrt(self.window_size)

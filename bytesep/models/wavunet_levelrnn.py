@@ -19,33 +19,37 @@ from bytesep.models.pytorch_modules import (
     Subband,
 )
 
-from bytesep.models.wavunet import WavUNetEncoderBlock, WavUNetDecoderBlock, WavUNetConvBlock
+from bytesep.models.wavunet import (
+    WavUNetEncoderBlock,
+    WavUNetDecoderBlock,
+    WavUNetConvBlock,
+)
 
 
 def init_gru(rnn):
-    """Initialize a GRU layer. """
-    
+    """Initialize a GRU layer."""
+
     def _concat_init(tensor, init_funcs):
         (length, fan_out) = tensor.shape
         fan_in = length // len(init_funcs)
-    
+
         for (i, init_func) in enumerate(init_funcs):
             init_func(tensor[i * fan_in : (i + 1) * fan_in, :])
-        
+
     def _inner_uniform(tensor):
         fan_in = nn.init._calculate_correct_fan(tensor, 'fan_in')
         nn.init.uniform_(tensor, -math.sqrt(3 / fan_in), math.sqrt(3 / fan_in))
-    
+
     for i in range(rnn.num_layers):
         _concat_init(
             getattr(rnn, 'weight_ih_l{}'.format(i)),
-            [_inner_uniform, _inner_uniform, _inner_uniform]
+            [_inner_uniform, _inner_uniform, _inner_uniform],
         )
         torch.nn.init.constant_(getattr(rnn, 'bias_ih_l{}'.format(i)), 0)
 
         _concat_init(
             getattr(rnn, 'weight_hh_l{}'.format(i)),
-            [_inner_uniform, _inner_uniform, nn.init.orthogonal_]
+            [_inner_uniform, _inner_uniform, nn.init.orthogonal_],
         )
         torch.nn.init.constant_(getattr(rnn, 'bias_hh_l{}'.format(i)), 0)
 
@@ -57,11 +61,13 @@ class RNN(nn.Module):
         self.segment_samples = segment_samples
 
         self.rnn = nn.GRU(
-            input_size=in_channels, 
-            hidden_size=out_channels // 2, 
-            num_layers=1, bias=True, 
-            batch_first=True, dropout=0., 
-            bidirectional=True
+            input_size=in_channels,
+            hidden_size=out_channels // 2,
+            num_layers=1,
+            bias=True,
+            batch_first=True,
+            dropout=0.0,
+            bidirectional=True,
         )
 
         self.init_weights()
@@ -82,26 +88,33 @@ class RNN(nn.Module):
         """
         x = input_tensor
         origin_len = x.shape[2]
-        pad_len = (int(np.ceil(x.shape[2] / self.segment_samples)) * self.segment_samples - origin_len)
-        
+        pad_len = (
+            int(np.ceil(x.shape[2] / self.segment_samples)) * self.segment_samples
+            - origin_len
+        )
+
         x = F.pad(x, pad=(0, pad_len))
-        
+
         batch_size, channels_num, total_samples = x.shape
         segments_num = total_samples // self.segment_samples
-        
+
         x = x.reshape(batch_size, channels_num, segments_num, self.segment_samples)
 
-        x = x.permute(0, 2, 3, 1)   # (batch_size, segments_num, segment_samples, channels_num)
+        x = x.permute(
+            0, 2, 3, 1
+        )  # (batch_size, segments_num, segment_samples, channels_num)
         x = x.reshape(batch_size * segments_num, self.segment_samples, channels_num)
 
         x, _ = self.rnn(x)  # (batch_size * segments_num, segment_samples, channels_num)
         channels_num = x.shape[-1]
-        
+
         x = x.reshape(batch_size, segments_num, self.segment_samples, channels_num)
-        x = x.permute(0, 3, 1, 2)   # (batch_size, channels_num, segments_num, segment_samples)
+        x = x.permute(
+            0, 3, 1, 2
+        )  # (batch_size, channels_num, segments_num, segment_samples)
 
         x = x.reshape(batch_size, channels_num, total_samples)
-        x = x[:, :, 0 : origin_len]
+        x = x[:, :, 0:origin_len]
 
         output = x + input_tensor
 
@@ -238,9 +251,15 @@ class WavUNetLevelRNN(nn.Module):
         self.encoder_rnn3 = RNN(in_channels=128, out_channels=128, segment_samples=100)
         self.encoder_rnn4 = RNN(in_channels=256, out_channels=256, segment_samples=100)
         self.encoder_rnn5 = RNN(in_channels=512, out_channels=512, segment_samples=100)
-        self.encoder_rnn6 = RNN(in_channels=1024, out_channels=1024, segment_samples=100)
-        self.encoder_rnn7 = RNN(in_channels=2048, out_channels=2048, segment_samples=100)
-        self.decoder_rnn1 = RNN(in_channels=1024, out_channels=1024, segment_samples=100)
+        self.encoder_rnn6 = RNN(
+            in_channels=1024, out_channels=1024, segment_samples=100
+        )
+        self.encoder_rnn7 = RNN(
+            in_channels=2048, out_channels=2048, segment_samples=100
+        )
+        self.decoder_rnn1 = RNN(
+            in_channels=1024, out_channels=1024, segment_samples=100
+        )
         self.decoder_rnn2 = RNN(in_channels=512, out_channels=512, segment_samples=100)
         self.decoder_rnn3 = RNN(in_channels=256, out_channels=256, segment_samples=100)
         self.decoder_rnn4 = RNN(in_channels=128, out_channels=128, segment_samples=100)
@@ -318,7 +337,7 @@ class WavUNetLevelRNN(nn.Module):
 
         # Reshape
         wav_out = x[:, :, 0:origin_len]
-        
+
         output_dict = {"waveform": wav_out}
-        
+
         return output_dict

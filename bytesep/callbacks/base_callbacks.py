@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import NoReturn
 
 import pytorch_lightning as pl
 import torch
@@ -18,7 +19,7 @@ class SaveCheckpointsCallback(pl.Callback):
 
         Args:
             model: nn.Module
-            checkpoints_dir: str
+            checkpoints_dir: str, directory to save checkpoints
             save_step_frequency: int
         """
         self.model = model
@@ -27,7 +28,7 @@ class SaveCheckpointsCallback(pl.Callback):
         os.makedirs(self.checkpoints_dir, exist_ok=True)
 
     @rank_zero_only
-    def on_batch_end(self, trainer: pl.Trainer, _) -> None:
+    def on_batch_end(self, trainer: pl.Trainer, _) -> NoReturn:
         r"""Save checkpoint."""
         global_step = trainer.global_step
 

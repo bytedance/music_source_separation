@@ -98,20 +98,20 @@ def create_indexes(args) -> NoReturn:
                     bgn_sample = 0
                     while bgn_sample + segment_samples < hf[key_in_hdf5].shape[-1]:
                         meta = {
-                            'hdf5_path': hdf5_path, 
+                            'hdf5_path': hdf5_path,
                             'key_in_hdf5': key_in_hdf5,
                             'begin_sample': bgn_sample,
                             'end_sample': bgn_sample + segment_samples,
                         }
                         indexes_dict[source_type].append(meta)
-                        
+
                         bgn_sample += hop_samples
 
                     # If the audio length is shorter than the segment length,
                     # then use the entire audio as a segment.
                     if bgn_sample == 0:
                         meta = {
-                            'hdf5_path': hdf5_path, 
+                            'hdf5_path': hdf5_path,
                             'key_in_hdf5': key_in_hdf5,
                             'begin_sample': 0,
                             'end_sample': segment_samples,

@@ -12,16 +12,26 @@ import librosa
 import numpy as np
 
 from bytesep.utils import float32_to_int16, load_audio
-from bytesep.dataset_creation.pack_audios_to_hdf5s.instruments_solo import read_csv as read_instruments_solo_csv
-from bytesep.dataset_creation.pack_audios_to_hdf5s.maestro import read_csv as read_maestro_csv
+from bytesep.dataset_creation.pack_audios_to_hdf5s.instruments_solo import (
+    read_csv as read_instruments_solo_csv,
+)
+from bytesep.dataset_creation.pack_audios_to_hdf5s.maestro import (
+    read_csv as read_maestro_csv,
+)
 
 
 def get_random_segment(audio_path, random_state, segment_seconds, mono, sample_rate):
     duration = librosa.get_duration(filename=audio_path)
 
-    start_time = random_state.uniform(0., duration - segment_seconds)
+    start_time = random_state.uniform(0.0, duration - segment_seconds)
 
-    audio = load_audio(audio_path=audio_path, mono=mono, sample_rate=sample_rate, offset=start_time, duration=segment_seconds)
+    audio = load_audio(
+        audio_path=audio_path,
+        mono=mono,
+        sample_rate=sample_rate,
+        offset=start_time,
+        duration=segment_seconds,
+    )
 
     return audio
 
@@ -38,7 +48,7 @@ def create_evaluation(args):
     mono = True if channels == 1 else False
 
     split = 'test'
-    segment_seconds = 10.
+    segment_seconds = 10.0
 
     random_state = np.random.RandomState(1234)
 
@@ -55,7 +65,7 @@ def create_evaluation(args):
         os.makedirs(output_dir, exist_ok=True)
 
     for n in range(evaluation_segments_num):
-        
+
         print('{} / {}'.format(n, evaluation_segments_num))
 
         #
@@ -63,39 +73,53 @@ def create_evaluation(args):
         piano_audio_path = os.path.join(piano_dataset_dir, piano_audio_name)
 
         piano_audio = get_random_segment(
-            audio_path=piano_audio_path, 
-            random_state=random_state, 
-            segment_seconds=segment_seconds, 
-            mono=mono, 
-            sample_rate=sample_rate
+            audio_path=piano_audio_path,
+            random_state=random_state,
+            segment_seconds=segment_seconds,
+            mono=mono,
+            sample_rate=sample_rate,
         )
 
-        output_piano_path = os.path.join(evaluation_audios_dir, split, 'piano', '{:04d}.wav'.format(n))
-        soundfile.write(file=output_piano_path, data=piano_audio.T, samplerate=sample_rate)
+        output_piano_path = os.path.join(
+            evaluation_audios_dir, split, 'piano', '{:04d}.wav'.format(n)
+        )
+        soundfile.write(
+            file=output_piano_path, data=piano_audio.T, samplerate=sample_rate
+        )
         print("Write out to {}".format(output_piano_path))
 
         #
         symphony_audio_name = random_state.choice(symphony_audio_names)
-        symphony_audio_path = os.path.join(symphony_dataset_dir, "mp3s", symphony_audio_name)
-        
-        symphony_audio = get_random_segment(
-            audio_path=symphony_audio_path, 
-            random_state=random_state, 
-            segment_seconds=segment_seconds, 
-            mono=mono, 
-            sample_rate=sample_rate
+        symphony_audio_path = os.path.join(
+            symphony_dataset_dir, "mp3s", symphony_audio_name
         )
 
-        output_symphony_path = os.path.join(evaluation_audios_dir, split, 'symphony', '{:04d}.wav'.format(n))
-        soundfile.write(file=output_symphony_path, data=symphony_audio.T, samplerate=sample_rate)
+        symphony_audio = get_random_segment(
+            audio_path=symphony_audio_path,
+            random_state=random_state,
+            segment_seconds=segment_seconds,
+            mono=mono,
+            sample_rate=sample_rate,
+        )
+
+        output_symphony_path = os.path.join(
+            evaluation_audios_dir, split, 'symphony', '{:04d}.wav'.format(n)
+        )
+        soundfile.write(
+            file=output_symphony_path, data=symphony_audio.T, samplerate=sample_rate
+        )
         print("Write out to {}".format(output_symphony_path))
 
         #
         mixture_audio = symphony_audio + piano_audio
-        output_mixture_path = os.path.join(evaluation_audios_dir, split, 'mixture', '{:04d}.wav'.format(n))
-        soundfile.write(file=output_mixture_path, data=mixture_audio.T, samplerate=sample_rate)
+        output_mixture_path = os.path.join(
+            evaluation_audios_dir, split, 'mixture', '{:04d}.wav'.format(n)
+        )
+        soundfile.write(
+            file=output_mixture_path, data=mixture_audio.T, samplerate=sample_rate
+        )
         print("Write out to {}".format(output_mixture_path))
-        
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

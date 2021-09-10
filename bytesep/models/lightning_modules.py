@@ -29,7 +29,7 @@ class LitSourceSeparation(pl.LightningModule):
             lr_lambda: function
         """
         super().__init__()
-        
+
         self.batch_data_preprocessor = batch_data_preprocessor
         self.model = model
         self.optimizer_type = optimizer_type
@@ -37,7 +37,6 @@ class LitSourceSeparation(pl.LightningModule):
         self.learning_rate = learning_rate
         self.lr_lambda = lr_lambda
 
-    
     def training_step(self, batch_data_dict: Dict, batch_idx: int) -> float:
         r"""Forward a mini-batch data to model, calculate loss function, and
         train for one step. A mini-batch data is evenly distributed to multiple
@@ -79,7 +78,6 @@ class LitSourceSeparation(pl.LightningModule):
         )
 
         return loss
-    
 
     def configure_optimizers(self) -> Any:
         r"""Configure optimizer."""
@@ -90,18 +88,18 @@ class LitSourceSeparation(pl.LightningModule):
                 lr=self.learning_rate,
                 betas=(0.9, 0.999),
                 eps=1e-08,
-                weight_decay=0.,
+                weight_decay=0.0,
                 amsgrad=True,
             )
 
         elif self.optimizer_type == "AdamW":
             optimizer = optim.AdamW(
-                self.model.parameters(), 
-                lr=self.learning_rate, 
-                betas=(0.9, 0.999), 
-                eps=1e-08, 
-                weight_decay=0., 
-                amsgrad=True
+                self.model.parameters(),
+                lr=self.learning_rate,
+                betas=(0.9, 0.999),
+                eps=1e-08,
+                weight_decay=0.0,
+                amsgrad=True,
             )
 
         else:
@@ -129,58 +127,72 @@ def get_model_class(model_type):
         from bytesep.models.resunet_ismir2021 import (
             ResUNet143_DecouplePlusInplaceABN_ISMIR2021,
         )
+
         return ResUNet143_DecouplePlusInplaceABN_ISMIR2021
 
     elif model_type == 'UNet':
         from bytesep.models.unet import UNet
+
         return UNet
 
     elif model_type == 'UNet2':
         from bytesep.models.unet2 import UNet2
+
         return UNet2
 
     elif model_type == 'UNetSubbandTime':
         from bytesep.models.unet_subbandtime import UNetSubbandTime
+
         return UNetSubbandTime
 
     elif model_type == 'UNetSubbandTime2':
         from bytesep.models.unet_subbandtime2 import UNetSubbandTime2
+
         return UNetSubbandTime2
 
     elif model_type == 'ResUNet143_Subbandtime':
         from bytesep.models.resunet_subbandtime import ResUNet143_Subbandtime
+
         return ResUNet143_Subbandtime
 
     elif model_type == 'ResUNet143_DecouplePlus':
         from bytesep.models.resunet import ResUNet143_DecouplePlus
+
         return ResUNet143_DecouplePlus
 
     elif model_type == 'ConditionalUNet':
         from bytesep.models.conditional_unet import ConditionalUNet
+
         return ConditionalUNet
 
     elif model_type == 'LevelRNN':
         from bytesep.models.levelrnn import LevelRNN
+
         return LevelRNN
 
     elif model_type == 'LevelRNN2':
         from bytesep.models.levelrnn2 import LevelRNN2
+
         return LevelRNN2
 
     elif model_type == 'WavUNet':
         from bytesep.models.wavunet import WavUNet
+
         return WavUNet
 
     elif model_type == 'WavUNetLevelRNN':
         from bytesep.models.wavunet_levelrnn import WavUNetLevelRNN
+
         return WavUNetLevelRNN
 
     elif model_type == 'TTnet':
         from bytesep.models.ttnet import TTnet
+
         return TTnet
 
     elif model_type == 'TTnetNoTransformer':
         from bytesep.models.ttnet_no_transformer import TTnetNoTransformer
+
         return TTnetNoTransformer
 
     else:

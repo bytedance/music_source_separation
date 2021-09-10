@@ -16,13 +16,13 @@ from bytesep.utils import float32_to_int16, load_audio
 
 def read_csv(meta_csv) -> Dict:
     r"""Get train & test names from csv.
-    
+
     Args:
         meta_csv: str
 
     Returns:
         names_dict: dict, e.g., {
-            'train', ['a1.mp3', 'a2.mp3'], 
+            'train', ['a1.mp3', 'a2.mp3'],
             'test': ['b1.mp3', 'b2.mp3']
         }
     """
@@ -34,7 +34,7 @@ def read_csv(meta_csv) -> Dict:
         audio_indexes = df['split'] == split
         audio_names = list(df['audio_filename'][audio_indexes])
         names_dict['{}'.format(split)] = audio_names
-        
+
     return names_dict
 
 
@@ -127,18 +127,14 @@ if __name__ == "__main__":
         required=True,
         help="Directory of the MAESTRO dataset.",
     )
-    parser.add_argument(
-        "--split", type=str, required=True, choices=["train", "test"]
-    )
+    parser.add_argument("--split", type=str, required=True, choices=["train", "test"])
     parser.add_argument(
         "--hdf5s_dir",
         type=str,
         required=True,
         help="Directory to write out hdf5 files.",
     )
-    parser.add_argument(
-        "--sample_rate", type=int, required=True, help="Sample rate."
-    )
+    parser.add_argument("--sample_rate", type=int, required=True, help="Sample rate.")
     parser.add_argument(
         "--channels", type=int, required=True, help="Use 1 for mono, 2 for stereo."
     )

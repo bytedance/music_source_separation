@@ -33,6 +33,10 @@ class SegmentSampler:
 
         self.meta_dict = pickle.load(open(indexes_path, "rb"))
         # E.g., {
+        #     'vocals': [
+        #         {'hdf5_path': 'songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0, 'end_sample': 132300}，
+        #         {'hdf5_path': 'songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0, 'end_sample': 132300}，
+        # }
         #     'vocals': [['song_A.h5', 0, 132300,], [4410, 136710], ...]
         #     'accompaniment': [[sonsg_A.h5, 0, 132300,], [4410, 136710], ...]
         # }
@@ -112,14 +116,6 @@ class SegmentSampler:
                         source_meta = self.meta_dict[source_type][index]
                         # E.g., ['song_A.h5', 198450, 330750]
 
-                        # hdf5_name, key, bgn_sample, _ = source_meta
-
-                        # hdf5_path = source_meta['hdf5_path']
-                        # key = source_meta['key']
-                        # bgn_sample = source_meta['begin_sample']
-                        # end_sample = bgn_sample + self.segment_samples
-                        # new_source_meta = [hdf5_path, key, bgn_sample, end_sample]
-
                         # source_metas.append(new_source_meta)
                         source_metas.append(source_meta)
 
@@ -149,6 +145,7 @@ class SegmentSampler:
             #     }
             #     ...
             # ]
+            # from IPython import embed; embed(using=False); os._exit(0)
 
             yield batch_meta_list
 
@@ -162,6 +159,7 @@ class SegmentSampler:
     def load_state_dict(self, state) -> NoReturn:
         self.pointers_dict = state['pointers_dict']
         self.indexes_dict = state['indexes_dict']
+
 
 '''
 class SegmentSampler:
@@ -318,6 +316,7 @@ class SegmentSampler:
         self.pointers_dict = state['pointers_dict']
         self.indexes_dict = state['indexes_dict']
 '''
+
 
 class DistributedSamplerWrapper:
     def __init__(self, sampler):
