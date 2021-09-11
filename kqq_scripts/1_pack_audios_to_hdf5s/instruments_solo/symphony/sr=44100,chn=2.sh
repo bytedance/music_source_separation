@@ -1,8 +1,8 @@
 #!/bin/bash
-DATASET_DIR=${1:-"./datasets/instruments_solo"}  # The first argument is dataset directory.
+INSTRUMENTS_SOLO_DATASET_DIR=${1:-"./datasets/instruments_solo"}  # The first argument is dataset directory.
 WORKSPACE=${2:-"./workspaces/bytesep"}  # The second argument is workspace directory.
 
-echo "DATASET_DIR=${DATASET_DIR}"
+echo "INSTRUMENTS_SOLO_DATASET_DIR=${INSTRUMENTS_SOLO_DATASET_DIR}"
 echo "WORKSPACE=${WORKSPACE}"
 
 # Users can change the following settings.
@@ -12,7 +12,7 @@ CHANNELS=2
 INSTRUMENT="symphony"
 
 # Paths
-SUB_DATASET_DIR="${DATASET_DIR}/${INSTRUMENT}_solo/v0.1"
+SUB_DATASET_DIR="${INSTRUMENTS_SOLO_DATASET_DIR}/${INSTRUMENT}_solo/v0.1"
 
 HDF5S_DIR="${WORKSPACE}/hdf5s/instruments_solo/${INSTRUMENT}/sr=${SAMPLE_RATE}_chn=${CHANNELS}/train"
 

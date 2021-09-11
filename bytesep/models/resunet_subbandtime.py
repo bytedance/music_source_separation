@@ -2,11 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchlibrosa.stft import STFT, ISTFT, magphase
-from inplace_abn.abn import InPlaceABNSync
+from torchlibrosa.stft import ISTFT, STFT, magphase
 
-from bytesep.models.subband_tools.pqmf import PQMF
 from bytesep.models.pytorch_modules import Base, init_bn, init_layer
+from bytesep.models.subband_tools.pqmf import PQMF
 
 
 class ConvBlockRes(nn.Module):

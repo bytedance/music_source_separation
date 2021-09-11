@@ -1,23 +1,17 @@
 import math
-from typing import List, Tuple, NoReturn, Dict
+from typing import Dict, List, NoReturn, Tuple
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
-from torchlibrosa.stft import STFT, ISTFT, magphase
+from torchlibrosa.stft import ISTFT, STFT, magphase
 
-from bytesep.models.pytorch_modules import (
-    Base,
-    init_bn,
-    init_layer,
-    act,
-    Subband,
-)
+from bytesep.models.pytorch_modules import Base, Subband, act, init_bn, init_layer
 
 
 class ConvBlock(nn.Module):

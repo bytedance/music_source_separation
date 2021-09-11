@@ -1,15 +1,13 @@
 import argparse
 import os
 import pathlib
-import pathlib
 import time
-import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
-from typing import List, NoReturn, Dict
+from typing import Dict, List, NoReturn
 
 import h5py
-import librosa
 import numpy as np
+import pandas as pd
 
 from bytesep.utils import float32_to_int16, load_audio
 
@@ -22,8 +20,8 @@ def read_csv(meta_csv) -> Dict:
 
     Returns:
         names_dict: dict, e.g., {
-            'train', ['a1.mp3', 'a2.mp3'],
-            'test': ['b1.mp3', 'b2.mp3']
+            'train', ['songA.mp3', 'songB.mp3', ...],
+            'test': ['songE.mp3', 'songF.mp3', ...]
         }
     """
     df = pd.read_csv(meta_csv, sep=',')
@@ -36,13 +34,26 @@ def read_csv(meta_csv) -> Dict:
         audio_names = [
             '{}.mp3'.format(pathlib.Path(audio_name).stem) for audio_name in audio_names
         ]
-        names_dict['{}'.format(split)] = audio_names
+        names_dict[split] = audio_names
 
     return names_dict
 
 
 def pack_audios_to_hdf5s(args) -> NoReturn:
-    r"""Pack (resampled) audio files into hdf5 files to speed up loading."""
+    r"""Pack (resampled) audio files into hdf5 files to speed up loading.
+
+    Args:
+        dataset_dir: str
+        split: str, 'train' | 'test'
+        source_type: str
+        hdf5s_dir: str, directory to write out hdf5 files
+        sample_rate: int
+        channels_num: int
+        mono: bool
+
+    Returns:
+        NoReturn
+    """
 
     # arguments & parameters
     dataset_dir = args.dataset_dir
@@ -90,7 +101,7 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
 
     # Uncomment for debug.
     # write_single_audio_to_hdf5(params[0])
-    # asdf
+    # os._exit()
 
     pack_hdf5s_time = time.time()
 

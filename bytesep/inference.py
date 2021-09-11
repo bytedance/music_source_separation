@@ -1,13 +1,13 @@
-from typing import Dict
 import argparse
-import time
 import os
+import time
+from typing import Dict
 
+import librosa
 import numpy as np
+import soundfile
 import torch
 import torch.nn as nn
-import librosa
-import soundfile
 
 from bytesep.models.lightning_modules import get_model_class
 from bytesep.utils import read_yaml
@@ -61,6 +61,7 @@ class Separator:
             segments_input_dict['condition'] = np.tile(
                 input_dict['condition'][None, :], (segments_num, 1)
             )
+            # (batch_size, segments_num)
 
         # Separate in mini-batches.
         sep_segments = self._forward_in_mini_batches(

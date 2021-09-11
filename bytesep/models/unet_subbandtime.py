@@ -1,24 +1,14 @@
-import math
-from typing import List, Tuple, NoReturn, Dict
+from typing import Dict
 
 import numpy as np
-import matplotlib.pyplot as plt
-import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.optim.lr_scheduler import LambdaLR
-from torchlibrosa.stft import STFT, ISTFT, magphase
-from bytesep.models.subband_tools.pqmf import PQMF
+from torchlibrosa.stft import ISTFT, STFT, magphase
 
-from bytesep.models.pytorch_modules import (
-    Base,
-    init_bn,
-    init_layer,
-    act,
-)
-from bytesep.models.unet import ConvBlock, EncoderBlock, DecoderBlock
+from bytesep.models.pytorch_modules import Base, init_bn, init_layer
+from bytesep.models.subband_tools.pqmf import PQMF
+from bytesep.models.unet import ConvBlock, DecoderBlock, EncoderBlock
 
 
 class UNetSubbandTime(nn.Module, Base):
@@ -29,10 +19,8 @@ class UNetSubbandTime(nn.Module, Base):
         self.input_channels = input_channels
         self.target_sources_num = target_sources_num
 
-        window_size = 512
-        hop_size = 110
-        # window_size = 2048
-        # hop_size = 441
+        window_size = 512  # 2048 // 4
+        hop_size = 110  # 441 // 4
         center = True
         pad_mode = "reflect"
         window = "hann"

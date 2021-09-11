@@ -1,38 +1,31 @@
 import argparse
 import os
-import pathlib
 import soundfile
-import time
-import pandas as pd
-from concurrent.futures import ProcessPoolExecutor
-from typing import List, NoReturn
+from typing import NoReturn
 
-import h5py
 import musdb
-import librosa
 import numpy as np
 
-from bytesep.utils import float32_to_int16, load_audio
+from bytesep.utils import load_audio
 
 
-def get_random_segment(audio_path, random_state, segment_seconds, mono, sample_rate):
-    duration = librosa.get_duration(filename=audio_path)
+def create_evaluation(args) -> NoReturn:
+    r"""Random mix and write out audios for evaluation.
 
-    start_time = random_state.uniform(0.0, duration - segment_seconds)
+    Args:
+        vctk_dataset_dir: str, the directory of the VCTK dataset
+        symphony_dataset_dir: str, the directory of the symphony dataset
+        evaluation_audios_dir: str, the directory to write out randomly selected and mixed audio segments
+        sample_rate: int
+        channels: int, e.g., 1 | 2
+        evaluation_segments_num: int
+        mono: bool
 
-    audio = load_audio(
-        audio_path=audio_path,
-        mono=mono,
-        sample_rate=sample_rate,
-        offset=start_time,
-        duration=segment_seconds,
-    )
+    Returns:
+        NoReturn
+    """
 
-    return audio
-
-
-def create_evaluation(args):
-
+    # arguments & parameters
     vctk_dataset_dir = args.vctk_dataset_dir
     musdb18_dataset_dir = args.musdb18_dataset_dir
     evaluation_audios_dir = args.evaluation_audios_dir
@@ -42,7 +35,6 @@ def create_evaluation(args):
     mono = True if channels == 1 else False
 
     split = 'test'
-
     random_state = np.random.RandomState(1234)
 
     # paths
@@ -113,7 +105,7 @@ def create_evaluation(args):
         )
         print("Write out to {}".format(output_music_path))
 
-        # Get and write out a mixture segment.
+        # Mix speech and music segments and write out a mixture segment.
         mixture_audio = speech_audio + music_audio
         # (channels_num, audio_samples)
 
@@ -133,37 +125,37 @@ if __name__ == "__main__":
         "--vctk_dataset_dir",
         type=str,
         required=True,
-        help="",
+        help="The directory of the VCTK dataset.",
     )
     parser.add_argument(
         "--musdb18_dataset_dir",
         type=str,
         required=True,
-        help="",
+        help="The directory of the MUSDB18 dataset.",
     )
     parser.add_argument(
         "--evaluation_audios_dir",
         type=str,
         required=True,
-        help="",
+        help="The directory to write out randomly selected and mixed audio segments.",
     )
     parser.add_argument(
         "--sample_rate",
         type=int,
         required=True,
-        help="",
+        help="Sample rate",
     )
     parser.add_argument(
         "--channels",
         type=int,
         required=True,
-        help="",
+        help="Audio channels, e.g, 1 or 2.",
     )
     parser.add_argument(
         "--evaluation_segments_num",
         type=int,
         required=True,
-        help="",
+        help="The number of segments to create for evaluation.",
     )
 
     # Parse arguments.

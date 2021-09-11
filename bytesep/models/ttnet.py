@@ -145,6 +145,7 @@ class TTnet(nn.Module):
 
         return output_dict
 
+
 '''
 class TransformerEncoderLayer(nn.Module):
     def __init__(
@@ -220,10 +221,10 @@ class LinearTransformer(nn.Module):
         init_layer(self.conv)
 
     def forward(self, x):
-        
+
         x = self.conv(x)
         # x: (batch_size, channels_num * 3, segment_samples)
-        
+
         q = x[:, 0 : self.channels_num, :]
         k = x[:, self.channels_num * 1 : self.channels_num * 2, :]
         v = x[:, self.channels_num * 2 :, :]
@@ -275,13 +276,12 @@ class TransformerEncoderLayer(nn.Module):
 
         self.transformer_layer = LinearTransformer(self.out_channel)
 
-
     def forward(self, x):
         in_channel = x.size()[1]
         x = self.cnn(x)
 
         x = self.transformer_layer(x)
-        
+
         return x
 
 

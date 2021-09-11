@@ -1,42 +1,35 @@
 import argparse
 import os
-import pathlib
-import soundfile
-import time
-import pandas as pd
-from concurrent.futures import ProcessPoolExecutor
-from typing import List, NoReturn
+from typing import NoReturn
 
-import h5py
 import librosa
 import numpy as np
+import soundfile
 
-from bytesep.utils import float32_to_int16, load_audio
 from bytesep.dataset_creation.pack_audios_to_hdf5s.instruments_solo import (
     read_csv as read_instruments_solo_csv,
 )
 from bytesep.dataset_creation.pack_audios_to_hdf5s.maestro import (
     read_csv as read_maestro_csv,
 )
+from bytesep.utils import load_random_segment
 
 
-def get_random_segment(audio_path, random_state, segment_seconds, mono, sample_rate):
-    duration = librosa.get_duration(filename=audio_path)
+def create_evaluation(args) -> NoReturn:
+    r"""Random mix and write out audios for evaluation.
 
-    start_time = random_state.uniform(0.0, duration - segment_seconds)
+    Args:
+        piano_dataset_dir: str, the directory of the piano dataset
+        symphony_dataset_dir: str, the directory of the symphony dataset
+        evaluation_audios_dir: str, the directory to write out randomly selected and mixed audio segments
+        sample_rate: int
+        channels: int, e.g., 1 | 2
+        evaluation_segments_num: int
+        mono: bool
 
-    audio = load_audio(
-        audio_path=audio_path,
-        mono=mono,
-        sample_rate=sample_rate,
-        offset=start_time,
-        duration=segment_seconds,
-    )
-
-    return audio
-
-
-def create_evaluation(args):
+    Returns:
+        NoReturn
+    """
 
     # arguments & parameters
     piano_dataset_dir = args.piano_dataset_dir
@@ -68,11 +61,11 @@ def create_evaluation(args):
 
         print('{} / {}'.format(n, evaluation_segments_num))
 
-        #
+        # Randomly select and write out a clean piano segment.
         piano_audio_name = random_state.choice(piano_audio_names)
         piano_audio_path = os.path.join(piano_dataset_dir, piano_audio_name)
 
-        piano_audio = get_random_segment(
+        piano_audio = load_random_segment(
             audio_path=piano_audio_path,
             random_state=random_state,
             segment_seconds=segment_seconds,
@@ -88,13 +81,13 @@ def create_evaluation(args):
         )
         print("Write out to {}".format(output_piano_path))
 
-        #
+        # Randomly select and write out a clean symphony segment.
         symphony_audio_name = random_state.choice(symphony_audio_names)
         symphony_audio_path = os.path.join(
             symphony_dataset_dir, "mp3s", symphony_audio_name
         )
 
-        symphony_audio = get_random_segment(
+        symphony_audio = load_random_segment(
             audio_path=symphony_audio_path,
             random_state=random_state,
             segment_seconds=segment_seconds,
@@ -110,7 +103,7 @@ def create_evaluation(args):
         )
         print("Write out to {}".format(output_symphony_path))
 
-        #
+        # Mix piano and symphony segments and write out a mixture segment.
         mixture_audio = symphony_audio + piano_audio
         output_mixture_path = os.path.join(
             evaluation_audios_dir, split, 'mixture', '{:04d}.wav'.format(n)
@@ -128,37 +121,37 @@ if __name__ == "__main__":
         "--piano_dataset_dir",
         type=str,
         required=True,
-        help="",
+        help="The directory of the piano dataset.",
     )
     parser.add_argument(
         "--symphony_dataset_dir",
         type=str,
         required=True,
-        help="",
+        help="The directory of the symphony dataset.",
     )
     parser.add_argument(
         "--evaluation_audios_dir",
         type=str,
         required=True,
-        help="",
+        help="The directory to write out randomly selected and mixed audio segments.",
     )
     parser.add_argument(
         "--sample_rate",
         type=int,
         required=True,
-        help="",
+        help="Sample rate.",
     )
     parser.add_argument(
         "--channels",
         type=int,
         required=True,
-        help="",
+        help="Audio channels, e.g, 1 or 2.",
     )
     parser.add_argument(
         "--evaluation_segments_num",
         type=int,
         required=True,
-        help="",
+        help="The number of segments to create for evaluation.",
     )
 
     # Parse arguments.

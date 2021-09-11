@@ -1,28 +1,32 @@
-from typing import Dict
 import argparse
-import time
 import os
 import pathlib
+import time
+from typing import NoReturn
 
-import numpy as np
-import torch
-import torch.nn as nn
 import librosa
+import numpy as np
 import soundfile
+import torch
 
+from bytesep.inference import Separator
 from bytesep.models.lightning_modules import get_model_class
 from bytesep.utils import read_yaml
-from bytesep.inference import Separator
 
 
-def inference(args):
+def inference(args) -> NoReturn:
+    r"""Separate all audios in a directory.
 
-    # Need to use torch.distributed if models contain inplace_abn.abn.InPlaceABNSync.
-    import torch.distributed as dist
+    Args:
+        config_yaml: str, the config file of a model being trained
+        checkpoint_path: str, the path of checkpoint to be loaded
+        audios_dir: str, the directory of audios to be separated
+        output_dir: str, the directory to write out separated audios
+        scale_volume: bool, if True then the volume is scaled to the maximum value of 1.
 
-    dist.init_process_group(
-        'gloo', init_method='file:///tmp/somefile', rank=0, world_size=1
-    )
+    Returns:
+        NoReturn
+    """
 
     # Arguments & parameters
     config_yaml = args.config_yaml
@@ -42,6 +46,17 @@ def inference(args):
     segment_samples = int(30 * sample_rate)
     batch_size = 1
     device = "cuda"
+
+    models_contains_inplaceabn = True
+
+    # Need to use torch.distributed if models contain inplace_abn.abn.InPlaceABNSync.
+    if models_contains_inplaceabn:
+
+        import torch.distributed as dist
+
+        dist.init_process_group(
+            'gloo', init_method='file:///tmp/somefile', rank=0, world_size=1
+        )
 
     # paths
     os.makedirs(output_dir, exist_ok=True)
@@ -104,11 +119,37 @@ def inference(args):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("--config_yaml", type=str, required=True)
-    parser.add_argument("--checkpoint_path", type=str, required=True)
-    parser.add_argument("--audios_dir", type=str, required=True)
-    parser.add_argument("--output_dir", type=str, required=True)
-    parser.add_argument('--scale_volume', action='store_true', default=False)
+    parser.add_argument(
+        "--config_yaml",
+        type=str,
+        required=True,
+        help="The config file of a model being trained.",
+    )
+    parser.add_argument(
+        "--checkpoint_path",
+        type=str,
+        required=True,
+        help="The path of checkpoint to be loaded.",
+    )
+    parser.add_argument(
+        "--audios_dir",
+        type=str,
+        required=True,
+        help="The directory of audios to be separated.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        required=True,
+        help="The directory to write out separated audios.",
+    )
+    parser.add_argument(
+        '--scale_volume',
+        action='store_true',
+        default=False,
+        help="set to True if separated audios are scaled to the maximum value of 1.",
+    )
 
     args = parser.parse_args()
+
     inference(args)

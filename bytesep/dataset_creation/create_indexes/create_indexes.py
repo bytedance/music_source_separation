@@ -1,7 +1,7 @@
-from typing import NoReturn
 import argparse
 import os
 import pickle
+from typing import NoReturn
 
 import h5py
 
@@ -14,19 +14,18 @@ def create_indexes(args) -> NoReturn:
     be shuffled and iterated for selecting segments to be mixed. E.g., the
     training indexes_dict looks like: {
         'vocals': [
-            [./piece1.h5, 0, 132300],
-            [./piece1.h5, 4410, 136710],
-            [./piece1.h5, 8820, 141120],
+            {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0, 'end_sample': 132300}
+            {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4410, 'end_sample': 136710}
             ...
-        ],
+        ]
         'accompaniment': [
-            [./piece1.h5, 0, 132300],
-            [./piece1.h5, 4410, 136710],
-            [./piece1.h5, 8820, 141120],
+            {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 0, 'end_sample': 132300}
+            {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 4410, 'end_sample': 136710}
             ...
         ]
     }
     """
+
     # Arugments & parameters
     workspace = args.workspace
     config_yaml = args.config_yaml
@@ -50,15 +49,13 @@ def create_indexes(args) -> NoReturn:
     indexes_dict = {source_type: [] for source_type in source_types}
     # E.g., indexes_dict will looks like: {
     #     'vocals': [
-    #         [./piece1.h5, 0, 132300],
-    #         [./piece1.h5, 4410, 136710],
-    #         [./piece1.h5, 8820, 141120],
+    #         {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0, 'end_sample': 132300}
+    #         {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4410, 'end_sample': 136710}
     #         ...
-    #     ],
+    #     ]
     #     'accompaniment': [
-    #         [./piece1.h5, 0, 132300],
-    #         [./piece1.h5, 4410, 136710],
-    #         [./piece1.h5, 8820, 141120],
+    #         {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 0, 'end_sample': 132300}
+    #         {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 4410, 'end_sample': 136710}
     #         ...
     #     ]
     # }

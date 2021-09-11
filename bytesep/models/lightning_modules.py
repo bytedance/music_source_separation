@@ -1,7 +1,7 @@
-from typing import Dict, List, Callable, Any
-import torch
+from typing import Any, Callable, Dict
 
 import pytorch_lightning as pl
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
@@ -22,7 +22,8 @@ class LitSourceSeparation(pl.LightningModule):
 
         Args:
             batch_data_preprocessor: object, used for preparing inputs and
-                targets for training. E.g., BasicBatchDataPreprocessor.
+                targets for training. E.g., BasicBatchDataPreprocessor is used
+                for preparing data in dictionary into tensor.
             model: nn.Module
             loss_function: function
             learning_rate: float
@@ -37,7 +38,7 @@ class LitSourceSeparation(pl.LightningModule):
         self.learning_rate = learning_rate
         self.lr_lambda = lr_lambda
 
-    def training_step(self, batch_data_dict: Dict, batch_idx: int) -> float:
+    def training_step(self, batch_data_dict: Dict, batch_idx: int) -> torch.float:
         r"""Forward a mini-batch data to model, calculate loss function, and
         train for one step. A mini-batch data is evenly distributed to multiple
         devices (if there are) for parallel training.
@@ -54,21 +55,24 @@ class LitSourceSeparation(pl.LightningModule):
             loss: float, loss function of this mini-batch
         """
         input_dict, target_dict = self.batch_data_preprocessor(batch_data_dict)
-        # mixtures: (batch_size, channels_num, segment_samples)
-        # targets: e.g., (batch_size, channels_num, segment_samples)
-
-        # from IPython import embed; embed(using=False); os._exit(0)
-        # import soundfile
-        # soundfile.write(file='_zz.wav', data=input_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=44100)
-        # soundfile.write(file='_zz2.wav', data=target_dict['waveform'].data.cpu().numpy()[1, 0], samplerate=44100)
+        # input_dict: {
+        #     'waveform': (batch_size, channels_num, segment_samples),
+        #     (if_exist) 'condition': (batch_size, channels_num),
+        # }
+        # target_dict: {
+        #     'waveform': (batch_size, target_sources_num * channels_num, segment_samples),
+        # }
 
         # Forward.
         self.model.train()
 
         output_dict = self.model(input_dict)
+        # output_dict: {
+        #     'waveform': (batch_size, target_sources_num * channels_num, segment_samples),
+        # }
 
         outputs = output_dict['waveform']
-        # outputs:, e.g, (batch_size, channels_num, segment_samples)
+        # outputs:, e.g, (batch_size, target_sources_num * channels_num, segment_samples)
 
         # Calculate loss.
         loss = self.loss_function(
@@ -135,20 +139,10 @@ def get_model_class(model_type):
 
         return UNet
 
-    elif model_type == 'UNet2':
-        from bytesep.models.unet2 import UNet2
-
-        return UNet2
-
     elif model_type == 'UNetSubbandTime':
         from bytesep.models.unet_subbandtime import UNetSubbandTime
 
         return UNetSubbandTime
-
-    elif model_type == 'UNetSubbandTime2':
-        from bytesep.models.unet_subbandtime2 import UNetSubbandTime2
-
-        return UNetSubbandTime2
 
     elif model_type == 'ResUNet143_Subbandtime':
         from bytesep.models.resunet_subbandtime import ResUNet143_Subbandtime
@@ -169,11 +163,6 @@ def get_model_class(model_type):
         from bytesep.models.levelrnn import LevelRNN
 
         return LevelRNN
-
-    elif model_type == 'LevelRNN2':
-        from bytesep.models.levelrnn2 import LevelRNN2
-
-        return LevelRNN2
 
     elif model_type == 'WavUNet':
         from bytesep.models.wavunet import WavUNet

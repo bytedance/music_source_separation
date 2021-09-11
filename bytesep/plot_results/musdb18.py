@@ -1,13 +1,9 @@
-import os
-import sys
-import numpy as np
 import argparse
-import h5py
-import math
-import time
-import logging
+import os
 import pickle
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def load_sdrs(workspace, task_name, filename, config, gpus, source_type):

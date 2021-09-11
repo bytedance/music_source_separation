@@ -11,7 +11,7 @@ train:
     channels: 2
     segment_seconds: 3.0
     model_type: ResUNet143_Subbandtime
-    loss_type: l1_wav
+    loss_type: l1_wav_l1_sp
     optimizer_type: Adam
     mini_data: False
     augmentations:

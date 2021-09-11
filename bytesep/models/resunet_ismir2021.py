@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchlibrosa.stft import STFT, ISTFT, magphase
 from inplace_abn.abn import InPlaceABNSync
+from torchlibrosa.stft import ISTFT, STFT, magphase
 
 from bytesep.models.pytorch_modules import Base, init_bn, init_layer
 
@@ -16,7 +16,9 @@ class ConvBlockRes(nn.Module):
         self.activation = activation
         padding = [kernel_size[0] // 2, kernel_size[1] // 2]
 
+        # ABN is not used for bn1 because we found using abn1 will degrade performance.
         self.bn1 = nn.BatchNorm2d(in_channels, momentum=momentum)
+
         self.abn2 = InPlaceABNSync(
             num_features=out_channels, momentum=momentum, activation='leaky_relu'
         )

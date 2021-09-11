@@ -6,15 +6,24 @@ from concurrent.futures import ProcessPoolExecutor
 from typing import List, NoReturn
 
 import h5py
-import librosa
 import numpy as np
 
-from bytesep.utils import load_audio, float32_to_int16
+from bytesep.utils import float32_to_int16, load_audio
 
 
 def pack_audios_to_hdf5s(args) -> NoReturn:
-    """Pack sources of audio files to hdf5 files. Hdf5 files can speed up
-    loading and indexing.
+    r"""Pack (resampled) audio files into hdf5 files to speed up loading.
+
+    Args:
+        dataset_dir: str
+        split: str, 'train' | 'test'
+        hdf5s_dir: str, directory to write out hdf5 files
+        sample_rate: int
+        channels_num: int
+        mono: bool
+
+    Returns:
+        NoReturn
     """
 
     # arguments & parameters
@@ -60,6 +69,7 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
 
     # Uncomment for debug.
     # write_single_audio_to_hdf5(params[0])
+    # os._exit(0)
 
     pack_hdf5s_time = time.time()
 

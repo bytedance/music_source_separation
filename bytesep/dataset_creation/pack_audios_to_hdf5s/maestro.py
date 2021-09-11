@@ -1,17 +1,15 @@
 import argparse
 import os
 import pathlib
-import pathlib
 import time
-import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
-from typing import List, NoReturn, Dict
+from typing import Dict, NoReturn
 
-import h5py
-import librosa
-import numpy as np
+import pandas as pd
 
-from bytesep.utils import float32_to_int16, load_audio
+from bytesep.dataset_creation.pack_audios_to_hdf5s.instruments_solo import (
+    write_single_audio_to_hdf5,
+)
 
 
 def read_csv(meta_csv) -> Dict:
@@ -33,13 +31,25 @@ def read_csv(meta_csv) -> Dict:
     for split in ['train', 'test']:
         audio_indexes = df['split'] == split
         audio_names = list(df['audio_filename'][audio_indexes])
-        names_dict['{}'.format(split)] = audio_names
+        names_dict[split] = audio_names
 
     return names_dict
 
 
 def pack_audios_to_hdf5s(args) -> NoReturn:
-    r"""Pack (resampled) audio files into hdf5 files to speed up loading."""
+    r"""Pack (resampled) audio files into hdf5 files to speed up loading.
+
+    Args:
+        dataset_dir: str
+        split: str, 'train' | 'test'
+        hdf5s_dir: str, directory to write out hdf5 files
+        sample_rate: int
+        channels_num: int
+        mono: bool
+
+    Returns:
+        NoReturn
+    """
 
     # arguments & parameters
     dataset_dir = args.dataset_dir
@@ -48,6 +58,8 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
     sample_rate = args.sample_rate
     channels = args.channels
     mono = True if channels == 1 else False
+
+    source_type = "piano"
 
     # Only pack data for training data.
     assert split == "train"
@@ -75,6 +87,7 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
         param = (
             audio_index,
             audio_name,
+            source_type,
             audio_path,
             mono,
             sample_rate,
@@ -84,6 +97,7 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
 
     # Uncomment for debug.
     # write_single_audio_to_hdf5(params[0])
+    # os._exit(0)
 
     pack_hdf5s_time = time.time()
 
@@ -92,30 +106,6 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
         pool.map(write_single_audio_to_hdf5, params)
 
     print("Pack hdf5 time: {:.3f} s".format(time.time() - pack_hdf5s_time))
-
-
-def write_single_audio_to_hdf5(param: List) -> NoReturn:
-    r"""Write single audio into hdf5 file."""
-
-    (
-        audio_index,
-        audio_name,
-        audio_path,
-        mono,
-        sample_rate,
-        hdf5_path,
-    ) = param
-
-    with h5py.File(hdf5_path, "w") as hf:
-
-        hf.attrs.create("audio_name", data=audio_name, dtype="S100")
-        hf.attrs.create("sample_rate", data=sample_rate, dtype=np.int32)
-
-        audio = load_audio(audio_path=audio_path, mono=mono, sample_rate=sample_rate)
-
-        hf.create_dataset(name="piano", data=float32_to_int16(audio), dtype=np.int16)
-
-    print('{} Write hdf5 to {}'.format(audio_index, hdf5_path))
 
 
 if __name__ == "__main__":
