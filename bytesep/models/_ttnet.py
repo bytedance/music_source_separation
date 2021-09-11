@@ -2,17 +2,6 @@ import torch
 import torch.nn as nn
 from fast_transformers.builders import TransformerEncoderBuilder
 import torch.nn.functional as F
-import time
-from typing import NoReturn
-
-
-def init_layer(layer: nn.Module) -> NoReturn:
-    r"""Initialize a Linear or Convolutional layer."""
-    nn.init.xavier_uniform_(layer.weight)
-
-    if hasattr(layer, "bias"):
-        if layer.bias is not None:
-            layer.bias.data.fill_(0.0)
 
 
 class TTnet(nn.Module):
@@ -124,12 +113,9 @@ class TTnet(nn.Module):
         # x = F.pad(audio_input, (0, 344), "constant", 0)
 
         saved = []
-        t1 = time.time()
-        for i, encode in enumerate(self.encoder):
+        for encode in self.encoder:
             x = encode(x)
             saved.append(x)
-            print(i, time.time() - t1)
-            t1 = time.time()
 
         for decode in self.decoder:
             skip = saved.pop(-1)
@@ -146,7 +132,6 @@ class TTnet(nn.Module):
         return output_dict
 
 
-'''
 class TransformerEncoderLayer(nn.Module):
     def __init__(
         self,
@@ -203,84 +188,6 @@ class TransformerEncoderLayer(nn.Module):
         # x = x.view(bs, num_packs, self.out_channel, )  # (1, 110592, 16)
         #
         x = x.transpose(1, 2)  # (1, 16, 110592)
-        return x
-'''
-
-
-class LinearTransformer(nn.Module):
-    def __init__(self, channels_num):
-        super(LinearTransformer, self).__init__()
-
-        self.channels_num = channels_num
-
-        self.conv = nn.Conv1d(channels_num, channels_num * 3, kernel_size=1, padding=0)
-
-        self.init_weights()
-
-    def init_weights(self):
-        init_layer(self.conv)
-
-    def forward(self, x):
-
-        x = self.conv(x)
-        # x: (batch_size, channels_num * 3, segment_samples)
-
-        q = x[:, 0 : self.channels_num, :]
-        k = x[:, self.channels_num * 1 : self.channels_num * 2, :]
-        v = x[:, self.channels_num * 2 :, :]
-        # q, k, v: (batch_size, channels_num, segment_samples)
-
-        a1 = torch.bmm(k, v.transpose(1, 2))
-        # (batch_size, channels_num, channels_num)
-
-        output = torch.bmm(a1, q)
-
-        return output
-
-
-class TransformerEncoderLayer(nn.Module):
-    def __init__(
-        self,
-        in_channel,
-        out_channel,
-        kernel_size,
-        stride,
-        padding,
-    ):
-        super(TransformerEncoderLayer, self).__init__()
-        self.in_channel = in_channel
-        self.out_channel = out_channel
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-
-        self.unfold = nn.Unfold(
-            kernel_size=(self.kernel_size, 1),
-            stride=(self.stride, 1),
-            padding=(self.padding, 0),
-        )
-
-        self.trans = TransformerEncoderBuilder.from_kwargs(
-            n_layers=1,
-            n_heads=32,
-            query_dimensions=self.out_channel // 32,
-            value_dimensions=self.out_channel // 32,
-            feed_forward_dimensions=self.out_channel * 4,
-            attention_type="linear",
-        ).get()
-        self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.out_channel))
-
-        self.cnn = nn.Conv1d(
-            self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2
-        )
-
-        self.transformer_layer = LinearTransformer(self.out_channel)
-
-    def forward(self, x):
-        in_channel = x.size()[1]
-        x = self.cnn(x)
-
-        x = self.transformer_layer(x)
 
         return x
 

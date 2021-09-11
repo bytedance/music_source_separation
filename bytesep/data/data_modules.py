@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, NoReturn
+from typing import Dict, List, NoReturn, Optional
 
 import h5py
 import librosa
@@ -13,8 +13,8 @@ from bytesep.utils import int16_to_float32
 class DataModule(LightningDataModule):
     def __init__(
         self,
-        train_sampler,
-        train_dataset,
+        train_sampler: object,
+        train_dataset: object,
         num_workers: int,
         distributed: bool,
     ):
@@ -58,7 +58,7 @@ class DataModule(LightningDataModule):
 
 
 class Dataset:
-    def __init__(self, augmentor, segment_samples: int):
+    def __init__(self, augmentor: object, segment_samples: int):
         r"""Used for getting data according to a meta.
 
         Args:
@@ -100,7 +100,12 @@ class Dataset:
             waveforms = []  # Audio segments to be mix-audio augmented.
 
             for m in meta[source_type]:
-                # E.g., ['.../song_A.h5', 3995460, 4127760]
+                # E.g., {
+                #     'hdf5_path': '.../song_A.h5',
+                #     'key_in_hdf5': 'vocals',
+                #     'begin_sample': '13406400',
+                #     'end_sample': 13538700,
+                # }
 
                 hdf5_path = m['hdf5_path']
                 key_in_hdf5 = m['key_in_hdf5']
@@ -111,7 +116,9 @@ class Dataset:
 
                     if source_type == 'audioset':
                         index_in_hdf5 = m['index_in_hdf5']
-                        waveform = int16_to_float32(hf['waveform'][index_in_hdf5][bgn_sample:end_sample])
+                        waveform = int16_to_float32(
+                            hf['waveform'][index_in_hdf5][bgn_sample:end_sample]
+                        )
                         waveform = waveform[None, :]
                     else:
                         waveform = int16_to_float32(

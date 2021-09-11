@@ -2,11 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchlibrosa.stft import STFT, ISTFT, magphase
-from inplace_abn.abn import InPlaceABNSync
+from torchlibrosa.stft import ISTFT, STFT, magphase
 
-from bytesep.models.subband_tools.pqmf import PQMF
 from bytesep.models.pytorch_modules import Base, init_bn, init_layer
+from bytesep.models.subband_tools.pqmf import PQMF
 
 
 class ConvBlockRes(nn.Module):
@@ -174,7 +173,11 @@ class ResUNet143_Subbandtime(nn.Module, Base):
 
         self.downsample_ratio = 2 ** 5  # This number equals 2^{#encoder_blcoks}
 
-        self.pqmf = PQMF(N=self.subbands_num, M=64, project_root='bytesep/models/subband_tools/filters')
+        self.pqmf = PQMF(
+            N=self.subbands_num,
+            M=64,
+            project_root='bytesep/models/subband_tools/filters',
+        )
 
         self.stft = STFT(
             n_fft=window_size,
@@ -502,7 +505,7 @@ class ResUNet143_Subbandtime(nn.Module, Base):
         x11 = self.decoder_block5(x10, x2)  # (bs, 64, T / 2, F / 2)
         x12 = self.decoder_block6(x11, x1)  # (bs, 32, T, F)
         (x, _) = self.after_conv_block1(x12)  # (bs, 32, T, F)
-        
+
         x = self.after_conv2(x)
         # (batch_size, subbands_num * target_sources_num * input_channles * self.K, T, F')
 
@@ -512,22 +515,26 @@ class ResUNet143_Subbandtime(nn.Module, Base):
         x = x[:, :, 0:origin_len, :]
         # (batch_size, subbands_num * target_sources_num * input_channles * self.K, T, F')
 
-        audio_length = subband_x.shape[2] 
+        audio_length = subband_x.shape[2]
 
         # Recover each subband spectrograms to subband waveforms. Then synthesis
         # the subband waveforms to a waveform.
         C1 = x.shape[1] // self.subbands_num
         C2 = mag.shape[1] // self.subbands_num
-        
-        separated_subband_audio = torch.cat([
-            self.feature_maps_to_wav(
-                input_tensor=x[:, j * C1 : (j + 1) * C1, :, :], 
-                sp=mag[:, j * C2 : (j + 1) * C2, :, :], 
-                sin_in=sin_in[:, j * C2 : (j + 1) * C2, :, :], 
-                cos_in=cos_in[:, j * C2 : (j + 1) * C2, :, :], 
-                audio_length=audio_length
-            ) for j in range(self.subbands_num)
-        ], dim=1)
+
+        separated_subband_audio = torch.cat(
+            [
+                self.feature_maps_to_wav(
+                    input_tensor=x[:, j * C1 : (j + 1) * C1, :, :],
+                    sp=mag[:, j * C2 : (j + 1) * C2, :, :],
+                    sin_in=sin_in[:, j * C2 : (j + 1) * C2, :, :],
+                    cos_in=cos_in[:, j * C2 : (j + 1) * C2, :, :],
+                    audio_length=audio_length,
+                )
+                for j in range(self.subbands_num)
+            ],
+            dim=1,
+        )
         # （batch_size, subbands_num * target_sources_num * input_channles, segment_samples)
 
         separated_audio = self.pqmf.synthesis(separated_subband_audio)

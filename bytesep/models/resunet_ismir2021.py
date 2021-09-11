@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchlibrosa.stft import STFT, ISTFT, magphase
 from inplace_abn.abn import InPlaceABNSync
+from torchlibrosa.stft import ISTFT, STFT, magphase
 
 from bytesep.models.pytorch_modules import Base, init_bn, init_layer
 
@@ -16,7 +16,9 @@ class ConvBlockRes(nn.Module):
         self.activation = activation
         padding = [kernel_size[0] // 2, kernel_size[1] // 2]
 
+        # ABN is not used for bn1 because we found using abn1 will degrade performance.
         self.bn1 = nn.BatchNorm2d(in_channels, momentum=momentum)
+
         self.abn2 = InPlaceABNSync(
             num_features=out_channels, momentum=momentum, activation='leaky_relu'
         )
@@ -171,7 +173,9 @@ class ResUNet143_DecouplePlusInplaceABN_ISMIR2021(nn.Module, Base):
 
         self.subbands_num = 1
 
-        assert self.subbands_num == 1, "Using subbands_num > 1 on spectrogram \
+        assert (
+            self.subbands_num == 1
+        ), "Using subbands_num > 1 on spectrogram \
             will lead to unexpected performance sometimes. Suggest to use \
             subband method on waveform."
 
@@ -506,7 +510,7 @@ class ResUNet143_DecouplePlusInplaceABN_ISMIR2021(nn.Module, Base):
         x11 = self.decoder_block5(x10, x2)  # (bs, 64, T / 2, F / 2)
         x12 = self.decoder_block6(x11, x1)  # (bs, 32, T, F)
         (x, _) = self.after_conv_block1(x12)  # (bs, 32, T, F)
-        
+
         x = self.after_conv2(x)  # (bs, channels * 3, T, F)
         # (batch_size, target_sources_num * input_channles * self.K * subbands_num, T, F')
 
@@ -516,7 +520,7 @@ class ResUNet143_DecouplePlusInplaceABN_ISMIR2021(nn.Module, Base):
 
         # Recover shape
         x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 1024 -> 1025.
-        
+
         x = x[:, :, 0:origin_len, :]
         # (batch_size, target_sources_num * input_channles * self.K, T, F)
 

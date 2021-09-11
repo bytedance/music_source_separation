@@ -1,13 +1,13 @@
-from typing import Dict
 import argparse
-import time
 import os
+import time
+from typing import Dict
 
+import librosa
 import numpy as np
+import soundfile
 import torch
 import torch.nn as nn
-import librosa
-import soundfile
 
 from bytesep.models.lightning_modules import get_model_class
 from bytesep.utils import read_yaml
@@ -61,6 +61,7 @@ class Separator:
             segments_input_dict['condition'] = np.tile(
                 input_dict['condition'][None, :], (segments_num, 1)
             )
+            # (batch_size, segments_num)
 
         # Separate in mini-batches.
         sep_segments = self._forward_in_mini_batches(
@@ -166,7 +167,9 @@ class Separator:
         else:
             return False
 
-    def _forward_in_mini_batches(self, model: nn.Module, segments_input_dict: Dict, batch_size: int) -> Dict:
+    def _forward_in_mini_batches(
+        self, model: nn.Module, segments_input_dict: Dict, batch_size: int
+    ) -> Dict:
         r"""Forward data to model in mini-batch.
 
         Args:
@@ -225,7 +228,10 @@ def inference(args):
 
     # Need to use torch.distributed if models contain inplace_abn.abn.InPlaceABNSync.
     import torch.distributed as dist
-    dist.init_process_group('gloo', init_method='file:///tmp/somefile', rank=0, world_size=1)
+
+    dist.init_process_group(
+        'gloo', init_method='file:///tmp/somefile', rank=0, world_size=1
+    )
 
     # Arguments & parameters
     config_yaml = args.config_yaml
@@ -249,7 +255,7 @@ def inference(args):
 
     # Get model class.
     Model = get_model_class(model_type)
-    
+
     # Create model.
     model = Model(input_channels=input_channels, target_sources_num=target_sources_num)
 
@@ -261,7 +267,12 @@ def inference(args):
     model.to(device)
 
     # Create separator.
-    separator = Separator(model=model, segment_samples=segment_samples, batch_size=batch_size, device=device)
+    separator = Separator(
+        model=model,
+        segment_samples=segment_samples,
+        batch_size=batch_size,
+        device=device,
+    )
 
     # Load audio.
     audio, _ = librosa.load(audio_path, sr=sample_rate, mono=False)

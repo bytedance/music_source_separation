@@ -114,7 +114,7 @@ class WavUNetDecoderBlock(nn.Module):
         x = self.conv_block2(x)
         return x
 
-        
+
 class WavUNet(nn.Module):
     def __init__(self, input_channels, target_sources_num):
         super(WavUNet, self).__init__()
@@ -285,7 +285,7 @@ class WavUNet(nn.Module):
 
         # Reshape
         wav_out = x[:, :, 0:origin_len]
-        
+
         output_dict = {"waveform": wav_out}
 
         return output_dict

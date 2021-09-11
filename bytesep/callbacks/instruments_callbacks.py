@@ -1,21 +1,17 @@
-import glob
 import logging
 import os
 import time
-import torch
-from typing import List
+from typing import List, NoReturn
 
 import librosa
 import numpy as np
-import pysepm
 import pytorch_lightning as pl
 import torch.nn as nn
-from pesq import pesq
 from pytorch_lightning.utilities import rank_zero_only
 
 from bytesep.callbacks.base_callbacks import SaveCheckpointsCallback
 from bytesep.inference import Separator
-from bytesep.utils import StatisticsContainer, read_yaml, calculate_sdr
+from bytesep.utils import StatisticsContainer, calculate_sdr, read_yaml
 
 
 def get_instruments_callbacks(
@@ -31,10 +27,9 @@ def get_instruments_callbacks(
 
     Args:
         config_yaml: str
-        dataset_dir: str
         workspace: str
-        checkpoints_dir: str
-        statistics_dir: str
+        checkpoints_dir: str, directory to save checkpoints
+        statistics_dir: str, directory to save statistics
         logger: pl.loggers.TensorBoardLogger
         model: nn.Module
         evaluate_device: str
@@ -85,7 +80,7 @@ def get_instruments_callbacks(
     )
 
     callbacks = [save_checkpoints_callback, evaluate_test_callback]
-    callbacks = [save_checkpoints_callback]
+    # callbacks = [save_checkpoints_callback]
 
     return callbacks
 
@@ -94,16 +89,16 @@ class EvaluationCallback(pl.Callback):
     def __init__(
         self,
         model: nn.Module,
-        input_channels,
-        evaluation_audios_dir,
-        target_source_type,
-        sample_rate,
-        mono,
+        input_channels: int,
+        evaluation_audios_dir: str,
+        target_source_type: str,
+        sample_rate: int,
+        mono: bool,
         segment_samples: int,
         batch_size: int,
         device: str,
         evaluate_step_frequency: int,
-        logger,
+        logger: pl.loggers.TensorBoardLogger,
         statistics_container: StatisticsContainer,
     ):
         r"""Callback to evaluate every #save_step_frequency steps.
@@ -111,14 +106,15 @@ class EvaluationCallback(pl.Callback):
         Args:
             model: nn.Module
             input_channels: int
-            clean_dir: str
-            noisy_dir: str
+            evaluation_audios_dir: str, directory containing audios for evaluation
+            target_source_type: str, e.g., 'violin'
             sample_rate: int
+            mono: bool
             segment_samples: int, length of segments to be input to a model, e.g., 44100*30
             batch_size, int, e.g., 12
             device: str, e.g., 'cuda'
             evaluate_step_frequency: int, evaluate every #save_step_frequency steps
-            logger: object
+            logger: pl.loggers.TensorBoardLogger
             statistics_container: StatisticsContainer
         """
         self.model = model
@@ -135,9 +131,8 @@ class EvaluationCallback(pl.Callback):
         # separator
         self.separator = Separator(model, self.segment_samples, batch_size, device)
 
-    
     @rank_zero_only
-    def on_batch_end(self, trainer: pl.Trainer, _) -> None:
+    def on_batch_end(self, trainer: pl.Trainer, _) -> NoReturn:
         r"""Evaluate losses on a few mini-batches. Losses are only used for
         observing training, and are not final F1 metrics.
         """
@@ -146,14 +141,16 @@ class EvaluationCallback(pl.Callback):
 
         if global_step % self.evaluate_step_frequency == 0:
 
-            # violin_audios_dir = os.path.join(self.evaluation_audios_dir, 'violin')
-            # piano_audios_dir = os.path.join(self.evaluation_audios_dir, 'piano')
             mixture_audios_dir = os.path.join(self.evaluation_audios_dir, 'mixture')
-            clean_audios_dir = os.path.join(self.evaluation_audios_dir, self.target_source_type)
-            
+            clean_audios_dir = os.path.join(
+                self.evaluation_audios_dir, self.target_source_type
+            )
+
             audio_names = sorted(os.listdir(mixture_audios_dir))
 
-            error_str = "Directory {} does not contain audios for evaluation!".format(self.evaluation_audios_dir)
+            error_str = "Directory {} does not contain audios for evaluation!".format(
+                self.evaluation_audios_dir
+            )
             assert len(audio_names) > 0, error_str
 
             logging.info("--- Step {} ---".format(global_step))
@@ -168,7 +165,7 @@ class EvaluationCallback(pl.Callback):
                 # Load audio.
                 mixture_path = os.path.join(mixture_audios_dir, audio_name)
                 clean_path = os.path.join(clean_audios_dir, audio_name)
-                
+
                 mixture, origin_fs = librosa.core.load(
                     mixture_path, sr=self.sample_rate, mono=self.mono
                 )
@@ -180,27 +177,22 @@ class EvaluationCallback(pl.Callback):
 
                 if mixture.ndim == 1:
                     mixture = mixture[None, :]
-                # (channels, audio_length)
+                # (channels_num, audio_length)
 
                 input_dict = {'waveform': mixture}
 
-                # from IPython import embed; embed(using=False); os._exit(0)
-                # import soundfile
-                # soundfile.write(file='_zz.wav', data=mixture[0], samplerate=self.sample_rate)
-
                 # separate
                 sep_wav = self.separator.separate(input_dict)
-                # (channels, audio_length)
+                # (channels_num, audio_length)
 
                 sdr = calculate_sdr(ref=clean, est=sep_wav)
 
                 print("{} SDR: {:.3f}".format(audio_name, sdr))
                 sdrs.append(sdr)
 
-
             logging.info("-----------------------------")
             logging.info('Avg SDR: {:.3f}'.format(np.mean(sdrs)))
-            
+
             logging.info("Evlauation time: {:.3f}".format(time.time() - eval_time))
 
             statistics = {"sdr": np.mean(sdrs)}

@@ -3,7 +3,7 @@ import logging
 import os
 import pathlib
 from functools import partial
-from typing import List
+from typing import List, NoReturn
 
 import pytorch_lightning as pl
 from pytorch_lightning.plugins import DDPPlugin
@@ -123,10 +123,14 @@ def _get_data_module(
     segment_seconds = configs['train']['segment_seconds']
     mixaudio_dict = configs['train']['augmentations']['mixaudio']
     augmentations = configs['train']['augmentations']
-    max_pitch_shift = max([augmentations['pitch_shift'][source_type] for source_type in input_source_types])
+    max_pitch_shift = max(
+        [
+            augmentations['pitch_shift'][source_type]
+            for source_type in input_source_types
+        ]
+    )
     batch_size = configs['train']['batch_size']
     steps_per_epoch = configs['train']['steps_per_epoch']
-    mini_data = configs['train']['mini_data']
 
     segment_samples = int(segment_seconds * sample_rate)
     ex_segment_samples = int(segment_samples * get_pitch_shift_factor(max_pitch_shift))
@@ -157,8 +161,14 @@ def _get_data_module(
     return data_module
 
 
-def train(args) -> None:
-    r"""Train & evaluate and save checkpoints."""
+def train(args) -> NoReturn:
+    r"""Train & evaluate and save checkpoints.
+
+    Args:
+        workspace: str, directory of workspace
+        gpus: int
+        config_yaml: str, path of config file for training
+    """
 
     # arugments & parameters
     workspace = args.workspace
@@ -216,7 +226,6 @@ def train(args) -> None:
     # loss function
     loss_function = get_loss_function(loss_type=loss_type)
 
-    
     # callbacks
     callbacks = get_callbacks(
         task_name=task_name,
@@ -269,9 +278,16 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest="mode")
 
     parser_train = subparsers.add_parser("train")
-    parser_train.add_argument("--workspace", type=str, required=True)
+    parser_train.add_argument(
+        "--workspace", type=str, required=True, help="Directory of workspace."
+    )
     parser_train.add_argument("--gpus", type=int, required=True)
-    parser_train.add_argument("--config_yaml", type=str, required=True)
+    parser_train.add_argument(
+        "--config_yaml",
+        type=str,
+        required=True,
+        help="Path of config file for training.",
+    )
 
     args = parser.parse_args()
     args.filename = pathlib.Path(__file__).stem

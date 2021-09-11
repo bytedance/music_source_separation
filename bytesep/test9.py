@@ -29,7 +29,7 @@ soundfile.write(file='_zz.wav', data=y, samplerate=44100)
 # src_info = {'rate': 44100}
 
 # # output signal properties
-# target_info = {'channels': 1, 
+# target_info = {'channels': 1,
 #                'length': 0, # not known beforehand
 #                'rate': 44100}
 
