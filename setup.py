@@ -1,13 +1,13 @@
 from setuptools import setup
 
 setup(
-    name='music_source_separation',
+    name='bytesep',
     version='0.0.1',
     description='Music source separation',
     author='ByteDance',
     url="https://github.com/bytedance/music_source_separation",
     license='Apache 2.0',
-    packages=['music_source_separation'],
+    packages=['bytesep'],
     include_package_data=True,
     install_requires=[
         'torch==1.7.1',
@@ -20,7 +20,7 @@ setup(
         'matplotlib==3.3.4',
         'musdb==0.4.0',
         'museval==0.4.0',
-        'inplace_abn==1.1.0'
+        'inplace-abn==1.1.0'
     ],
     zip_safe=False
 )

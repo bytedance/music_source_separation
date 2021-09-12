@@ -1,4 +1,4 @@
-def get_lr_lambda(step, warm_up_steps, reduce_lr_steps):
+def get_lr_lambda(step, warm_up_steps: int, reduce_lr_steps: int):
     r"""Get lr_lambda for LambdaLR. E.g.,
 
     .. code-block: python
@@ -6,6 +6,13 @@ def get_lr_lambda(step, warm_up_steps, reduce_lr_steps):
 
         from torch.optim.lr_scheduler import LambdaLR
         LambdaLR(optimizer, lr_lambda)
+
+    Args:
+        warm_up_steps: int, steps for warm up
+        reduce_lr_steps: int, reduce learning rate by 0.9 every #reduce_lr_steps steps
+
+    Returns:
+        learning rate: float
     """
     if step <= warm_up_steps:
         return step / warm_up_steps

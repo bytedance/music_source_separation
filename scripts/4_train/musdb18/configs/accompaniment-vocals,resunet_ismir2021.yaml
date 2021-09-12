@@ -5,12 +5,12 @@ train:
         - vocals
         - accompaniment
     target_source_types: 
-        - vocals
+        - accompaniment
     indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment.pkl"
     sample_rate: 44100
     channels: 2
     segment_seconds: 3.0
-    model_type: ResUNet143_Subbandtime
+    model_type: ResUNet143_DecouplePlusInplaceABN_ISMIR2021
     loss_type: l1_wav
     optimizer_type: Adam
     mini_data: False

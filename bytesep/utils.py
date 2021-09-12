@@ -2,13 +2,23 @@ import datetime
 import logging
 import os
 import pickle
+from typing import Dict, NoReturn
 
 import librosa
 import numpy as np
 import yaml
 
 
-def create_logging(log_dir, filemode):
+def create_logging(log_dir: str, filemode: str) -> logging:
+    r"""Create logging to write out log files.
+
+    Args:
+        logs_dir, str, directory to write out logs
+        filemode: str, e.g., "w"
+
+    Returns:
+        logging
+    """
     os.makedirs(log_dir, exist_ok=True)
     i1 = 0
 
@@ -34,7 +44,13 @@ def create_logging(log_dir, filemode):
     return logging
 
 
-def load_audio(audio_path: str, mono: bool, sample_rate: float, offset: float = 0., duration: float = None) -> np.array:
+def load_audio(
+    audio_path: str,
+    mono: bool,
+    sample_rate: float,
+    offset: float = 0.0,
+    duration: float = None,
+) -> np.array:
     r"""Load audio.
 
     Args:
@@ -42,7 +58,9 @@ def load_audio(audio_path: str, mono: bool, sample_rate: float, offset: float = 
         mono: bool
         sample_rate: float
     """
-    audio, _ = librosa.core.load(audio_path, sr=sample_rate, mono=mono, offset=offset, duration=duration)
+    audio, _ = librosa.core.load(
+        audio_path, sr=sample_rate, mono=mono, offset=offset, duration=duration
+    )
     # (audio_samples,) | (channels_num, audio_samples)
 
     if audio.ndim == 1:
@@ -52,16 +70,40 @@ def load_audio(audio_path: str, mono: bool, sample_rate: float, offset: float = 
     return audio
 
 
-def float32_to_int16(x):
+def load_random_segment(
+    audio_path: str, random_state, segment_seconds: float, mono: bool, sample_rate: int
+) -> np.array:
+    r"""Randomly select an audio segment from a recording."""
+
+    duration = librosa.get_duration(filename=audio_path)
+
+    start_time = random_state.uniform(0.0, duration - segment_seconds)
+
+    audio = load_audio(
+        audio_path=audio_path,
+        mono=mono,
+        sample_rate=sample_rate,
+        offset=start_time,
+        duration=segment_seconds,
+    )
+    # (channels_num, audio_samples)
+
+    return audio
+
+
+def float32_to_int16(x: np.float32) -> np.int16:
+
     x = np.clip(x, a_min=-1, a_max=1)
+
     return (x * 32767.0).astype(np.int16)
 
 
-def int16_to_float32(x):
+def int16_to_float32(x: np.int16) -> np.float32:
+
     return (x / 32767.0).astype(np.float32)
 
 
-def read_yaml(config_yaml):
+def read_yaml(config_yaml: str):
 
     with open(config_yaml, "r") as fr:
         configs = yaml.load(fr, Loader=yaml.FullLoader)
@@ -69,39 +111,30 @@ def read_yaml(config_yaml):
     return configs
 
 
-def check_configs_gramma(configs):
-
+def check_configs_gramma(configs: Dict) -> NoReturn:
+    r"""Check if the gramma of the config dictionary for training is legal."""
     input_source_types = configs['train']['input_source_types']
-    
+
     for augmentation_type in configs['train']['augmentations'].keys():
         augmentation_dict = configs['train']['augmentations'][augmentation_type]
 
         for source_type in augmentation_dict.keys():
             if source_type not in input_source_types:
-                error_msg = "The source type '{}'' in configs['train']['augmentations']['{}'] " \
-                    "must be one of input_source_types {}".format(source_type, augmentation_type, input_source_types)
+                error_msg = (
+                    "The source type '{}'' in configs['train']['augmentations']['{}'] "
+                    "must be one of input_source_types {}".format(
+                        source_type, augmentation_type, input_source_types
+                    )
+                )
                 raise Exception(error_msg)
 
 
-def mix_audio_from_same_source(data_dict, input_sources, mixaudio):
-    for source in input_sources:
-        (N, segment_samples, channels_num) = data_dict[source].shape
-        data_dict[source] = np.sum(
-            data_dict[source].reshape(
-                mixaudio, N // mixaudio, segment_samples, channels_num
-            ),
-            axis=0,
-        )
-
-    return data_dict
-
-
-def magnitude_to_db(x):
+def magnitude_to_db(x: float) -> float:
     eps = 1e-10
     return 20.0 * np.log10(max(x, eps))
 
 
-def db_to_magnitude(x):
+def db_to_magnitude(x: float) -> float:
     return 10.0 ** (x / 20)
 
 
@@ -145,10 +178,12 @@ class StatisticsContainer(object):
         self.statistics_dict = resume_statistics_dict
     '''
 
-def calculate_sdr(ref, est):
+
+def calculate_sdr(ref: np.array, est: np.array) -> float:
     s_true = ref
     s_artif = est - ref
-    sdr = 10. * (
-        np.log10(np.clip(np.mean(s_true ** 2), 1e-8, np.inf)) \
-        - np.log10(np.clip(np.mean(s_artif ** 2), 1e-8, np.inf)))
+    sdr = 10.0 * (
+        np.log10(np.clip(np.mean(s_true ** 2), 1e-8, np.inf))
+        - np.log10(np.clip(np.mean(s_artif ** 2), 1e-8, np.inf))
+    )
     return sdr

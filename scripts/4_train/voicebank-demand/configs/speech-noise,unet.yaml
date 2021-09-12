@@ -1,41 +1,41 @@
 ---
-task_name: musdb18
+task_name: voicebank-demand
 train:
     input_source_types:
-        - vocals
-        - accompaniment
+        - speech
+        - noise
     target_source_types: 
-        - vocals
-    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment.pkl"
+        - speech
+    indexes_dict: "indexes/voicebank-demand/sr=44100_chn=1/train/speech-noise.pkl"
     sample_rate: 44100
-    channels: 2
+    channels: 1
     segment_seconds: 3.0
-    model_type: ResUNet143_Subbandtime
+    model_type: UNet
     loss_type: l1_wav
     optimizer_type: Adam
     mini_data: False
     augmentations:
         mixaudio:
-            vocals: 2
-            accompaniment: 2
+            speech: 1
+            noise: 1
         pitch_shift:
-            vocals: 0
-            accompaniment: 0
+            speech: 0
+            noise: 0
         magnitude_scale:
-            vocals:
+            speech:
                 lower_db: 0
                 higher_db: 0
-            accompaniment:
+            noise:
                 lower_db: 0
                 higher_db: 0
         swap_channel:
-            vocals: False
-            accompaniment: False
+            speech: False
+            noise: False
         flip_axis:
-            vocals: False
-            accompaniment: False
+            speech: False
+            noise: False
     batch_data_preprocessor: BasicBatchDataPreprocessor
-    evaluation_callback: Musdb18EvaluationCallback
+    evaluation_callback: Default
     learning_rate: 1e-3
     batch_size: 16
     precision: 32
