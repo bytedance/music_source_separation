@@ -1,0 +1,53 @@
+---
+task_name: voicebank-demand
+train:
+    input_source_types:
+        - speech
+        - noise
+    target_source_types: 
+        - speech
+    indexes_dict: "indexes/voicebank-demand/sr=44100_chn=1/train/speech-noise.pkl"
+    sample_rate: 44100
+    channels: 1
+    segment_seconds: 3.0
+    model_type: UNet
+    loss_type: l1_wav
+    optimizer_type: Adam
+    mini_data: False
+    augmentations:
+        mixaudio:
+            speech: 1
+            noise: 1
+        pitch_shift:
+            speech: 0
+            noise: 0
+        magnitude_scale:
+            speech:
+                lower_db: 0
+                higher_db: 0
+            noise:
+                lower_db: 0
+                higher_db: 0
+        swap_channel:
+            speech: False
+            noise: False
+        flip_axis:
+            speech: False
+            noise: False
+    batch_data_preprocessor: BasicBatchDataPreprocessor
+    evaluation_callback: Default
+    learning_rate: 1e-3
+    batch_size: 16
+    precision: 32
+    steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
+    evaluate_step_frequency: 10000     # Evaluate every #evaluate_step_frequency steps.
+    save_step_frequency: 50000  # Save every #save_step_frequency steps.
+    early_stop_steps: 500001
+    warm_up_steps: 1000
+    reduce_lr_steps: 15000
+    random_seed: 1234
+    resume_checkpoint: ""
+
+evaluate:
+    segment_seconds: 30.0
+    batch_size: 1
