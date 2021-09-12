@@ -34,6 +34,7 @@ def inference(args) -> NoReturn:
     audios_dir = args.audios_dir
     output_dir = args.output_dir
     scale_volume = args.scale_volume
+    device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
 
     configs = read_yaml(config_yaml)
     sample_rate = configs['train']['sample_rate']
@@ -57,6 +58,8 @@ def inference(args) -> NoReturn:
         dist.init_process_group(
             'gloo', init_method='file:///tmp/somefile', rank=0, world_size=1
         )
+
+    print("Using {} for separating ..".format(device))
 
     # paths
     os.makedirs(output_dir, exist_ok=True)
@@ -149,6 +152,7 @@ if __name__ == "__main__":
         default=False,
         help="set to True if separated audios are scaled to the maximum value of 1.",
     )
+    parser.add_argument("--cuda", action='store_true', default=True)
 
     args = parser.parse_args()
 

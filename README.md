@@ -88,3 +88,12 @@ We pack audio waveforms into hdf5 files to speed up training.
   organization={Citeseer}
 }
 ```
+
+FAQ
+
+On Mac OSX, if users met "ModuleNotFoundError: No module named ..." error, then execute the following commands:
+
+```bash
+PYTHONPATH="./"
+export PYTHONPATH
+```

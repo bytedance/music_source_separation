@@ -238,6 +238,7 @@ def inference(args):
     checkpoint_path = args.checkpoint_path
     audio_path = args.audio_path
     output_path = args.output_path
+    device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
 
     configs = read_yaml(config_yaml)
     sample_rate = configs['train']['sample_rate']
@@ -248,7 +249,8 @@ def inference(args):
 
     segment_samples = int(30 * sample_rate)
     batch_size = 1
-    device = "cuda"
+
+    print("Using {} for separating ..".format(device))
 
     # paths
     if os.path.dirname(output_path) != "":
@@ -303,6 +305,7 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_path", type=str, required=True)
     parser.add_argument("--audio_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
+    parser.add_argument("--cuda", action='store_true', default=True)
 
     args = parser.parse_args()
     inference(args)
