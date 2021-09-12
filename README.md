@@ -12,6 +12,21 @@ Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
 pip install -r requirements.txt
 ```
 
+## Separation
+
+Users can easily separate their favorite audio recordings into vocals and accompaniment using the pretrained checkpoints.
+
+## Download checkpoints
+```bash
+./separate_scripts/download_checkpoints.sh
+```
+
+## Separate vocals and accompaniment
+```bash
+./separate_scripts/separate_vocals.sh "resources/vocals_accompaniment_10s.mp3" "sep_vocals.mp3"
+./separate_scripts/separate_accompaniment.sh "resources/vocals_accompaniment_10s.mp3" "sep_accompaniment.mp3"
+```
+
 ## Train a music source separation system from scratch
 
 ## 1. Download dataset
@@ -72,4 +87,13 @@ We pack audio waveforms into hdf5 files to speed up training.
   year={2021},
   organization={Citeseer}
 }
+```
+
+FAQ
+
+On Mac OSX, if users met "ModuleNotFoundError: No module named ..." error, then execute the following commands:
+
+```bash
+PYTHONPATH="./"
+export PYTHONPATH
 ```

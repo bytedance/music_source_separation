@@ -1,11 +1,9 @@
-from typing import NoReturn, List
+from typing import List, NoReturn
 
 import numpy as np
-import torch.nn as nn
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-
-from torchlibrosa.stft import magphase
 
 
 def init_embedding(layer: nn.Module) -> NoReturn:
@@ -35,6 +33,7 @@ def init_bn(bn: nn.Module) -> NoReturn:
 
 
 def act(x: torch.Tensor, activation: str) -> torch.Tensor:
+
     if activation == "relu":
         return F.relu_(x)
 
@@ -123,38 +122,13 @@ class Base:
         mag, cos, sin = self.wav_to_spectrogram_phase(input, eps)
         return mag
 
-    '''
-    def spectrogram_to_wav(self, input, spectrogram, length=None):
-        """Spectrogram to waveform.
-
-        Args:
-          input: (batch_size, segment_samples, channels_num)
-          spectrogram: (batch_size, channels_num, time_steps, freq_bins)
-
-        Outputs:
-          output: (batch_size, channels_num, segment_samples)
-        """
-        channels_num = input.shape[1]
-        wav_list = []
-        for channel in range(channels_num):
-            (real, imag) = self.stft(input[:, channel, :])
-            (_, cos, sin) = magphase(real, imag)
-            wav_list.append(
-                self.istft(
-                    spectrogram[:, channel : channel + 1, :, :] * cos,
-                    spectrogram[:, channel : channel + 1, :, :] * sin,
-                    length,
-                )
-            )
-
-        output = torch.stack(wav_list, dim=1)
-        return output
-    '''
-
 
 class Subband:
     def __init__(self, subbands_num: int):
-        r"""Analysis and synthesis spectrogram into subbands [1].
+        r"""Warning!! This class is not used!!
+
+        This class does not work as good as [1] which split subbands in the
+        time-domain. Please refere to [1] for formal implementation.
 
         [1] Liu, Haohe, et al. "Channel-wise subband input for better voice and
         accompaniment separation on high resolution music." arXiv preprint arXiv:2008.05216 (2020).

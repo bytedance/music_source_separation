@@ -5,9 +5,9 @@ import torch
 
 class BasicBatchDataPreprocessor:
     def __init__(self, target_source_types: List[str]):
-        r"""Batch data preprocessor. Used for prepare mixtures and targets for
-        training. If there are multiple target source types, then the waveforms
-        of those sources are stacked along the channel dimension.
+        r"""Batch data preprocessor. Used for preparing mixtures and targets for
+        training. If there are multiple target source types, the waveforms of
+        those sources will be stacked along the channel dimension.
 
         Args:
             target_source_types: List[str], e.g., ['vocals', 'bass', ...]
@@ -44,7 +44,6 @@ class BasicBatchDataPreprocessor:
         # targets: (batch_size, target_sources_num * channels_num, segment_samples)
 
         input_dict = {'waveform': mixtures}
-
         target_dict = {'waveform': targets}
 
         return input_dict, target_dict
@@ -53,8 +52,8 @@ class BasicBatchDataPreprocessor:
 class ConditionalSisoBatchDataPreprocessor:
     def __init__(self, target_source_types: List[str]):
         r"""Conditional single input single output (SISO) batch data
-        preprocessor. Used for prepare mixtures and targets for training. The
-        input contains both waveforms and conditions.
+        preprocessor. Select one target source from several target sources as
+        training target and prepare the corresponding conditional vector.
 
         Args:
             target_source_types: List[str], e.g., ['vocals', 'bass', ...]

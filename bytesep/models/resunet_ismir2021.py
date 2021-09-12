@@ -2,9 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from inplace_abn.abn import InPlaceABNSync
 from torchlibrosa.stft import ISTFT, STFT, magphase
 
-from bytesep.models.pytorch_modules import Base, Subband, act, init_bn, init_layer
+from bytesep.models.pytorch_modules import Base, init_bn, init_layer
 
 
 class ConvBlockRes(nn.Module):
@@ -15,8 +16,12 @@ class ConvBlockRes(nn.Module):
         self.activation = activation
         padding = [kernel_size[0] // 2, kernel_size[1] // 2]
 
+        # ABN is not used for bn1 because we found using abn1 will degrade performance.
         self.bn1 = nn.BatchNorm2d(in_channels, momentum=momentum)
-        self.bn2 = nn.BatchNorm2d(out_channels, momentum=momentum)
+
+        self.abn2 = InPlaceABNSync(
+            num_features=out_channels, momentum=momentum, activation='leaky_relu'
+        )
 
         self.conv1 = nn.Conv2d(
             in_channels=in_channels,
@@ -46,7 +51,6 @@ class ConvBlockRes(nn.Module):
                 stride=(1, 1),
                 padding=(0, 0),
             )
-
             self.is_shortcut = True
         else:
             self.is_shortcut = False
@@ -55,7 +59,6 @@ class ConvBlockRes(nn.Module):
 
     def init_weights(self):
         init_bn(self.bn1)
-        init_bn(self.bn2)
         init_layer(self.conv1)
         init_layer(self.conv2)
 
@@ -64,8 +67,8 @@ class ConvBlockRes(nn.Module):
 
     def forward(self, x):
         origin = x
-        x = self.conv1(act(self.bn1(x), self.activation))
-        x = self.conv2(act(self.bn2(x), self.activation))
+        x = self.conv1(F.leaky_relu_(self.bn1(x), negative_slope=0.01))
+        x = self.conv2(self.abn2(x))
 
         if self.is_shortcut:
             return self.shortcut(origin) + x
@@ -144,7 +147,7 @@ class DecoderBlockRes4B(nn.Module):
         init_layer(self.conv1)
 
     def forward(self, input_tensor, concat_tensor):
-        x = self.conv1(act(self.bn1(input_tensor), self.activation))
+        x = self.conv1(F.relu_(self.bn1(input_tensor)))
         x = torch.cat((x, concat_tensor), dim=1)
         x = self.conv_block2(x)
         x = self.conv_block3(x)
@@ -153,9 +156,9 @@ class DecoderBlockRes4B(nn.Module):
         return x
 
 
-class ResUNet143_DecouplePlus(nn.Module, Base):
+class ResUNet143_DecouplePlusInplaceABN_ISMIR2021(nn.Module, Base):
     def __init__(self, input_channels, target_sources_num):
-        super(ResUNet143_DecouplePlus, self).__init__()
+        super(ResUNet143_DecouplePlusInplaceABN_ISMIR2021, self).__init__()
 
         self.input_channels = input_channels
         self.target_sources_num = target_sources_num
@@ -163,15 +166,22 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         window_size = 2048
         hop_size = 441
         center = True
-        pad_mode = "reflect"
-        window = "hann"
-        activation = "relu"
+        pad_mode = 'reflect'
+        window = 'hann'
+        activation = 'leaky_relu'
         momentum = 0.01
 
-        self.subbands_num = 4
-        self.K = 4  # outputs: |M|, cos∠M, sin∠M, |M2|
+        self.subbands_num = 1
 
-        self.downsample_ratio = 2 ** 6  # This number equals 2^{#encoder_blcoks}
+        assert (
+            self.subbands_num == 1
+        ), "Using subbands_num > 1 on spectrogram \
+            will lead to unexpected performance sometimes. Suggest to use \
+            subband method on waveform."
+
+        # Downsample rate along the time axis.
+        self.K = 4  # outputs: |M|, cos∠M, sin∠M, Q
+        self.time_downsample_ratio = 2 ** 5  # This number equals 2^{#encoder_blcoks}
 
         self.stft = STFT(
             n_fft=window_size,
@@ -194,8 +204,6 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         )
 
         self.bn0 = nn.BatchNorm2d(window_size // 2 + 1, momentum=momentum)
-
-        self.subband = Subband(subbands_num=self.subbands_num)
 
         self.encoder_block1 = EncoderBlockRes4B(
             in_channels=input_channels * self.subbands_num,
@@ -337,10 +345,10 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
 
         self.after_conv2 = nn.Conv2d(
             in_channels=32,
-            out_channels=input_channels
-            * self.subbands_num
-            * target_sources_num
-            * self.K,
+            out_channels=target_sources_num
+            * input_channels
+            * self.K
+            * self.subbands_num,
             kernel_size=(1, 1),
             stride=(1, 1),
             padding=(0, 0),
@@ -364,10 +372,10 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         r"""Convert feature maps to waveform.
 
         Args:
-            input_tensor: (batch_size, feature_maps, time_steps, freq_bins)
-            sp: (batch_size, feature_maps, time_steps, freq_bins)
-            sin_in: (batch_size, feature_maps, time_steps, freq_bins)
-            cos_in: (batch_size, feature_maps, time_steps, freq_bins)
+            input_tensor: (batch_size, target_sources_num * input_channels * self.K, time_steps, freq_bins)
+            sp: (batch_size, target_sources_num * input_channels, time_steps, freq_bins)
+            sin_in: (batch_size, target_sources_num * input_channels, time_steps, freq_bins)
+            cos_in: (batch_size, target_sources_num * input_channels, time_steps, freq_bins)
 
         Outputs:
             waveform: (batch_size, target_sources_num * input_channels, segment_samples)
@@ -387,8 +395,8 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         mask_mag = torch.sigmoid(x[:, :, :, 0, :, :])
         _mask_real = torch.tanh(x[:, :, :, 1, :, :])
         _mask_imag = torch.tanh(x[:, :, :, 2, :, :])
-        linear_mag = x[:, :, :, 3, :, :]
         _, mask_cos, mask_sin = magphase(_mask_real, _mask_imag)
+        linear_mag = x[:, :, :, 3, :, :]
         # mask_cos, mask_sin: (batch_size, target_sources_num, input_channles, time_steps, freq_bins)
 
         # Y = |Y|cos∠Y + j|Y|sin∠Y
@@ -435,13 +443,18 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         return waveform
 
     def forward(self, input_dict):
-        r"""
+        r"""Forward data into the module.
+
         Args:
-            input: (batch_size, channels_num, segment_samples)
+            input_dict: dict, e.g., {
+                waveform: (batch_size, input_channels, segment_samples),
+                ...,
+            }
 
         Outputs:
-            output_dict: {
-                'wav': (batch_size, channels_num, segment_samples)
+            output_dict: dict, e.g., {
+                'waveform': (batch_size, input_channels, segment_samples),
+                ...,
             }
         """
         mixtures = input_dict['waveform']
@@ -454,22 +467,24 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         x = mag.transpose(1, 3)
         x = self.bn0(x)
         x = x.transpose(1, 3)
-        """(batch_size, input_channels, time_steps, freq_bins)"""
+        # x: (batch_size, input_channels, time_steps, freq_bins)
 
         # Pad spectrogram to be evenly divided by downsample ratio.
         origin_len = x.shape[2]
         pad_len = (
-            int(np.ceil(x.shape[2] / self.downsample_ratio)) * self.downsample_ratio
+            int(np.ceil(x.shape[2] / self.time_downsample_ratio))
+            * self.time_downsample_ratio
             - origin_len
         )
         x = F.pad(x, pad=(0, 0, 0, pad_len))
-        """(batch_size, input_channels, padded_time_steps, freq_bins)"""
+        # (batch_size, channels, padded_time_steps, freq_bins)
 
-        # Let frequency bins be evenly divided by 2, e.g., 1025 -> 1024
-        x = x[..., 0 : x.shape[-1] - 1]  # (bs, input_channels, T, F)
+        # Let frequency bins be evenly divided by 2, e.g., 1025 -> 1024.
+        x = x[..., 0 : x.shape[-1] - 1]  # (bs, channels, T, F)
 
-        x = self.subband.analysis(x)
-        # (bs, input_channels, T, F'), where F' = F // subbands_num
+        if self.subbands_num > 1:
+            x = self.subband.analysis(x)
+            # (bs, input_channels, T, F'), where F' = F // subbands_num
 
         # UNet
         (x1_pool, x1) = self.encoder_block1(x)  # x1_pool: (bs, 32, T / 2, F / 2)
@@ -497,14 +512,17 @@ class ResUNet143_DecouplePlus(nn.Module, Base):
         (x, _) = self.after_conv_block1(x12)  # (bs, 32, T, F)
 
         x = self.after_conv2(x)  # (bs, channels * 3, T, F)
-        # (batch_size, input_channles * subbands_num * targets_num * k, T, F')
+        # (batch_size, target_sources_num * input_channles * self.K * subbands_num, T, F')
 
-        x = self.subband.synthesis(x)
-        # (batch_size, input_channles * targets_num * K, T, F)
+        if self.subbands_num > 1:
+            x = self.subband.synthesis(x)
+            # (batch_size, target_sources_num * input_channles * self.K, T, F)
 
         # Recover shape
         x = F.pad(x, pad=(0, 1))  # Pad frequency, e.g., 1024 -> 1025.
-        x = x[:, :, 0:origin_len, :]  # (bs, feature_maps, time_steps, freq_bins)
+
+        x = x[:, :, 0:origin_len, :]
+        # (batch_size, target_sources_num * input_channles * self.K, T, F)
 
         audio_length = mixtures.shape[2]
 
