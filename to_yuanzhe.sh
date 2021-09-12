@@ -1,15 +1,15 @@
 #!/bin/bash
 # Download checkpoints from hdfs.
-hdfs dfs -get "hdfs://haruna/home/byte_speech_sv/user/kongqiuqiang/released_models/source_separation/20210905_resnet_vocals/step=200000.pth" "20210905_resnet_vocals_8.7dB.pth"
+hdfs dfs -get "hdfs://haruna/home/byte_speech_sv/user/kongqiuqiang/released_models/source_separation/20210912_resunet143_ismir/resunet143_ismir2021_vocals_8.9dB_350k_steps.pth"
 
-hdfs dfs -get "hdfs://haruna/home/byte_speech_sv/user/kongqiuqiang/released_models/source_separation/20210905_resnet_accompaniment/step=200000.pth" "20210905_resnet_accompaniment_16.7dB.pth"
+hdfs dfs -get "hdfs://haruna/home/byte_speech_sv/user/kongqiuqiang/released_models/source_separation/20210912_resunet143_ismir/resunet143_ismir2021_accompaniment_16.8dB_350k_steps.pth"
 
 # config file
-CONFIG_YAML="kqq_scripts/4_train/musdb18/configs/vocals-accompaniment,resunet.yaml"
+CONFIG_YAML="kqq_scripts/4_train/musdb18/configs/vocals-accompaniment,resunet_ismir2021.yaml"
 
 # checkpoint paths
-VOCALS_CHECKPOINT_PATH="20210905_resnet_vocals_8.7dB.pth"
-ACCOMPANIMENT_CHECKPOINT_PATH="20210905_resnet_accompaniment_16.7dB.pth"
+VOCALS_CHECKPOINT_PATH="resunet143_ismir2021_vocals_8.9dB_350k_steps.pth"
+ACCOMPANIMENT_CHECKPOINT_PATH="resunet143_ismir2021_accompaniment_16.8dB_350k_steps.pth"
 
 # Inference.
 CUDA_VISIBLE_DEVICES=0 python3 bytesep/inference.py \

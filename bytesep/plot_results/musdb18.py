@@ -86,7 +86,7 @@ def plot_statistics(args):
             gpus=2,
             source_type="vocals",
         )
-        (line,) = ax.plot(sdrs, label='ResUNet,l1_wav', linewidth=linewidth)
+        (line,) = ax.plot(sdrs, label='ResUNet_ISMIR2021,l1_wav', linewidth=linewidth)
         lines.append(line)
 
         sdrs = load_sdrs(
@@ -133,7 +133,29 @@ def plot_statistics(args):
             gpus=2,
             source_type="accompaniment",
         )
-        (line,) = ax.plot(sdrs, label='ResUNet,l1_wav', linewidth=linewidth)
+        (line,) = ax.plot(sdrs, label='ResUNet_ISMIR2021,l1_wav', linewidth=linewidth)
+        lines.append(line)
+
+        # sdrs = load_sdrs(
+        #     workspace,
+        #     task_name,
+        #     filename,
+        #     config='accompaniment-vocals,unet_subbandtime',
+        #     gpus=1,
+        #     source_type="accompaniment",
+        # )
+        # (line,) = ax.plot(sdrs, label='UNet_subbtandtime,l1_wav', linewidth=linewidth)
+        # lines.append(line)
+
+        sdrs = load_sdrs(
+            workspace,
+            task_name,
+            filename,
+            config='accompaniment-vocals,resunet_subbandtime',
+            gpus=1,
+            source_type="accompaniment",
+        )
+        (line,) = ax.plot(sdrs, label='ResUNet_subbtandtime,l1_wav', linewidth=linewidth)
         lines.append(line)
 
         ylim = 20

@@ -251,7 +251,8 @@ def inference(args):
     device = "cuda"
 
     # paths
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    if os.path.dirname(output_path) != "":
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # Get model class.
     Model = get_model_class(model_type)

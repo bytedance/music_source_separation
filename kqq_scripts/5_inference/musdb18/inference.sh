@@ -10,7 +10,7 @@ CHECKPOINT_PATH="${WORKSPACE}/checkpoints/musdb18/train/config=vocals-accompanim
 
 # Inference
 CUDA_VISIBLE_DEVICES=0 python3 bytesep/inference.py \
-	--config_yaml=$TRAIN_CONFIG_YAML \
+    --config_yaml=$TRAIN_CONFIG_YAML \
     --checkpoint_path=$CHECKPOINT_PATH \
     --audio_path="resources/vocals_accompaniment_10s.mp3" \
     --output_path="sep_results/vocals_accompaniment_10s_sep_vocals.mp3"
