@@ -184,5 +184,10 @@ def get_model_class(model_type):
 
         return TTnetNoTransformer
 
+    elif model_type == 'JiafengCNN':
+        from bytesep.models.ttnet_jiafeng import JiafengCNN
+
+        return JiafengCNN
+
     else:
         raise NotImplementedError

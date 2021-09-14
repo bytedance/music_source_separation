@@ -1,0 +1,48 @@
+---
+task_name: musdb18
+train:
+    input_source_types:
+        - vocals
+        - bass
+        - drums
+        - other
+    target_source_types: 
+        - bass
+    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-bass-drums-other.pkl"
+    sample_rate: 44100
+    channels: 2
+    segment_seconds: 5.9443084
+    model_type: JiafengCNN
+    loss_type: l1_wav
+    optimizer_type: AdamW
+    mini_data: False
+    augmentations:
+        mixaudio:
+            vocals: 1
+            bass: 1
+            drums: 1
+            other: 1
+        pitch_shift:
+            vocals: 4
+            bass: 4
+            drums: 4
+            other: 4
+    batch_data_preprocessor: BasicBatchDataPreprocessor
+    evaluation_callback: Musdb18EvaluationCallback
+    learning_rate: 3e-4
+    batch_size: 8
+    precision: 32
+    steps_per_epoch: 10000  # Every 10000 steps is called an `epoch`.
+    evaluate_step_frequency: 50000     # Evaluate every #evaluate_step_frequency steps.
+    save_step_frequency: 10000  # Save every #save_step_frequency steps.
+    early_stop_steps: 100000001
+    warm_up_steps: 2000
+    reduce_lr_steps: 100000000
+    random_seed: 1234
+    resume_checkpoint: ""
+
+evaluate:
+    train: "hdf5s/musdb18/sr=44100_ch=2/train/full_train"
+    test: "hdf5s/musdb18/sr=44100_ch=2/test"
+    segment_seconds: 5.9443084
+    batch_size: 1

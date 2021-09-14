@@ -4,7 +4,6 @@ from fast_transformers.builders import TransformerEncoderBuilder
 import torch.nn.functional as F
 import time
 from typing import NoReturn
-from bytesep.models.linear_transformer import LinearTransformerBlock
 
 
 def init_layer(layer: nn.Module) -> NoReturn:
@@ -260,7 +259,7 @@ class TransformerEncoderLayer(nn.Module):
             stride=(self.stride, 1),
             padding=(self.padding, 0),
         )
-        
+
         self.trans = TransformerEncoderBuilder.from_kwargs(
             n_layers=1,
             n_heads=32,
@@ -275,8 +274,7 @@ class TransformerEncoderLayer(nn.Module):
             self.in_channel, self.out_channel, kernel_size=8, stride=4, padding=2
         )
 
-        # self.transformer_layer = LinearTransformer(self.out_channel)
-        self.transformer_layer = LinearTransformerBlock(d_model=self.out_channel, n_heads=8)
+        self.transformer_layer = LinearTransformer(self.out_channel)
 
     def forward(self, x):
         in_channel = x.size()[1]
@@ -309,16 +307,14 @@ class TransformerDecoderLayer(nn.Module):
             padding=(self.padding, 0),
         )
 
-        # self.trans = TransformerEncoderBuilder.from_kwargs(
-        #     n_layers=1,
-        #     n_heads=32,
-        #     query_dimensions=self.in_channel // 32,
-        #     value_dimensions=self.in_channel // 32,
-        #     feed_forward_dimensions=self.in_channel * 4,
-        #     attention_type="linear",
-        # ).get()
-        
-        self.transformer_layer = LinearTransformerBlock(d_model=self.out_channel, n_heads=8)
+        self.trans = TransformerEncoderBuilder.from_kwargs(
+            n_layers=1,
+            n_heads=32,
+            query_dimensions=self.in_channel // 32,
+            value_dimensions=self.in_channel // 32,
+            feed_forward_dimensions=self.in_channel * 4,
+            attention_type="linear",
+        ).get()
         self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.in_channel))
 
         self.t_cnn = nn.ConvTranspose1d(
@@ -334,7 +330,7 @@ class TransformerDecoderLayer(nn.Module):
         x = x.reshape(bs * num_packs, self.kernel_size, self.in_channel)
         # -------------
         x = x + self.pos
-        x = self.transformer_layer(x)
+        x = self.trans(x)
         # -------------
         x = x.reshape(bs, num_packs * self.kernel_size, self.in_channel)
         # x = F.max_pool2d(x, kernel_size=(self.kernel_size, 1)).squeeze(1)  # (110592, 16)
@@ -342,7 +338,6 @@ class TransformerDecoderLayer(nn.Module):
         #
         x = x.transpose(1, 2)  # (1, 16, 110592)
         x = self.t_cnn(x)
-        from IPython import embed; embed(using=False); os._exit(0)
 
         return x
 
