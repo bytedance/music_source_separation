@@ -34,7 +34,11 @@ def inference(args) -> NoReturn:
     audios_dir = args.audios_dir
     output_dir = args.output_dir
     scale_volume = args.scale_volume
-    device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
+    device = (
+        torch.device('cuda')
+        if args.cuda and torch.cuda.is_available()
+        else torch.device('cpu')
+    )
 
     configs = read_yaml(config_yaml)
     sample_rate = configs['train']['sample_rate']

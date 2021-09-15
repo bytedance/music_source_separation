@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ZENODO_PATH="https://zenodo.org/record/5501678/files"
+ZENODO_PATH="https://zenodo.org/record/5507029/files"
 DOWNLOADED_CHECKPOINT_DIR="./downloaded_checkpoints"
 
 mkdir -p $DOWNLOADED_CHECKPOINT_DIR

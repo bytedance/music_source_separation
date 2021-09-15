@@ -6,22 +6,36 @@ Music source separation is a task to separate audio recordings into individual s
 
 Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
 
-## Installation
+## Separation
+
+Users can easily separate their favorite audio recordings into vocals and accompaniment using the pretrained checkpoints.
+
+## Method 1. Separate by installing the package
+
+```bash
+python3 setup.py install
+```
+
+```python
+python3 separate_scripts/separate.py 
+    --audio_path="./resources/vocals_accompaniment_10s.mp3" 
+    --source_type="accompaniment"
+```
+
+## Method 2. Separate by using the source code
+
+### 1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Separation
-
-Users can easily separate their favorite audio recordings into vocals and accompaniment using the pretrained checkpoints.
-
-## Download checkpoints
+### 2. Download checkpoints
 ```bash
 ./separate_scripts/download_checkpoints.sh
 ```
 
-## Separate vocals and accompaniment
+### 3. Separate vocals and accompaniment
 ```bash
 ./separate_scripts/separate_vocals.sh "resources/vocals_accompaniment_10s.mp3" "sep_vocals.mp3"
 ./separate_scripts/separate_accompaniment.sh "resources/vocals_accompaniment_10s.mp3" "sep_accompaniment.mp3"

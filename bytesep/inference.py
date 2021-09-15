@@ -2,6 +2,7 @@ import argparse
 import os
 import time
 from typing import Dict
+import pathlib
 
 import librosa
 import numpy as np
@@ -224,6 +225,92 @@ class Separator:
             dict[key] = [value]
 
 
+class SeparatorWrapper:
+    def __init__(
+        self, source_type='vocals', model=None, checkpoint_path=None, device='cuda'
+    ):
+
+        input_channels = 2
+        target_sources_num = 1
+        model_type = "ResUNet143_Subbandtime"
+        segment_samples = 44100 * 10
+        batch_size = 1
+
+        self.checkpoint_path = self.download_checkpoints(checkpoint_path, source_type)
+
+        if device == 'cuda' and torch.cuda.is_available():
+            self.device = 'cuda'
+        else:
+            self.device = 'cpu'
+
+        # Get model class.
+        Model = get_model_class(model_type)
+
+        # Create model.
+        self.model = Model(
+            input_channels=input_channels, target_sources_num=target_sources_num
+        )
+
+        # Load checkpoint.
+        checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
+        self.model.load_state_dict(checkpoint["model"])
+
+        # Move model to device.
+        self.model.to(self.device)
+
+        # Create separator.
+        self.separator = Separator(
+            model=self.model,
+            segment_samples=segment_samples,
+            batch_size=batch_size,
+            device=self.device,
+        )
+
+    def download_checkpoints(self, checkpoint_path, source_type):
+
+        if source_type == "vocals":
+            checkpoint_bare_name = "resunet143_subbtandtime_vocals_8.8dB_350k_steps"
+
+        elif source_type == "accompaniment":
+            checkpoint_bare_name = (
+                "resunet143_subbtandtime_accompaniment_16.4dB_350k_steps.pth"
+            )
+
+        else:
+            raise NotImplementedError
+
+        if not checkpoint_path:
+            checkpoint_path = '{}/bytesep_data/{}.pth'.format(
+                str(pathlib.Path.home()), checkpoint_bare_name
+            )
+
+        print('Checkpoint path: {}'.format(checkpoint_path))
+
+        if (
+            not os.path.exists(checkpoint_path)
+            or os.path.getsize(checkpoint_path) < 4e8
+        ):
+
+            os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+
+            zenodo_dir = "https://zenodo.org/record/5507029/files"
+            zenodo_path = os.path.join(
+                zenodo_dir, "{}?download=1".format(checkpoint_bare_name)
+            )
+
+            os.system('wget -O "{}" "{}"'.format(checkpoint_path, zenodo_path))
+
+        return checkpoint_path
+
+    def separate(self, audio):
+
+        input_dict = {'waveform': audio}
+
+        sep_wav = self.separator.separate(input_dict)
+
+        return sep_wav
+
+
 def inference(args):
 
     # Need to use torch.distributed if models contain inplace_abn.abn.InPlaceABNSync.
@@ -238,7 +325,11 @@ def inference(args):
     checkpoint_path = args.checkpoint_path
     audio_path = args.audio_path
     output_path = args.output_path
-    device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
+    device = (
+        torch.device('cuda')
+        if args.cuda and torch.cuda.is_available()
+        else torch.device('cpu')
+    )
 
     configs = read_yaml(config_yaml)
     sample_rate = configs['train']['sample_rate']

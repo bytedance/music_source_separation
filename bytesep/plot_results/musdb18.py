@@ -155,7 +155,9 @@ def plot_statistics(args):
             gpus=1,
             source_type="accompaniment",
         )
-        (line,) = ax.plot(sdrs, label='ResUNet_subbtandtime,l1_wav', linewidth=linewidth)
+        (line,) = ax.plot(
+            sdrs, label='ResUNet_subbtandtime,l1_wav', linewidth=linewidth
+        )
         lines.append(line)
 
         ylim = 20
