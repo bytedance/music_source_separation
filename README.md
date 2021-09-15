@@ -94,12 +94,12 @@ We pack audio waveforms into hdf5 files to speed up training.
 
 ## Results
 
-| Model      | Size         | SDR              | process 1s time (GPU) | process 1s time (CPU) |
+| Model      | Size (MB)        | SDR (dB)             | process 1s time (GPU) | process 1s time (CPU) |
 |------------|--------------|------------------|-----------|------------------|
-| ResUNet143 vocals      | 461 MB | 8.9 dB |
-| ResUNet143 acc. | 461 MB | 16.8 dB |
-| ResUNet143 Subband vocals       | 414 MB | 8.8 dB |
-| ResUNet143 Subband acc.  | 414 MB | 16.4 dB |
+| ResUNet143 vocals      | 461 | 8.9 |  0.036
+| ResUNet143 acc. | 461 | 16.8 | 0.036
+| ResUNet143 Subband vocals       | 414 | 8.8 | 0.012
+| ResUNet143 Subband acc.  | 414 | 16.4 | 0.012 
 
 ## Reference
 
