@@ -16,6 +16,12 @@ Users can easily separate their favorite audio recordings into vocals and accomp
 python3 setup.py install
 ```
 
+```python
+python3 separate_scripts/separate.py 
+    --audio_path="./resources/vocals_accompaniment_10s.mp3" 
+    --source_type="accompaniment"
+```
+
 ## Method 2. Separate by using the source code
 
 ### 1. Install dependencies
