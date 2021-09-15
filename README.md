@@ -43,7 +43,7 @@ pip install -r requirements.txt
 
 ## Train a music source separation system from scratch
 
-## 1. Download dataset
+### 1. Download dataset
 
 We use the MUSDB18 dataset to train music source separation systems. The trained system can be used to separate vocals, accompaniments, bass, and other sources. Execute the following script to download and decompress the MUSDB18 dataset:
 
@@ -63,39 +63,50 @@ The dataset looks like:
 └── README.md
 </pre>
 
-## 2. Pack audio files into hdf5 files
+### 2. Pack audio files into hdf5 files
 
 We pack audio waveforms into hdf5 files to speed up training.
 ```bash
 ."/scripts/1_pack_audios_to_hdf5s/musdb18/sr=44100,chn=2.sh"
 ```
 
-## 3. Create indexes for training
+### 3. Create indexes for training
 ```bash
 ./scripts/2_create_indexes/musdb18/create_indexes.sh
 ```
 
-## 3. Create evaluation audios
+### 3. Create evaluation audios
 ```bash
 ./scripts/3_create_evaluation_audios/musdb18/create_evaluation_audios.sh
 ```
 
-## 4. Train & evaluate & save checkpoints
+### 4. Train & evaluate & save checkpoints
 ```bash
 ./scripts/4_train/musdb18/train.sh
 ```
 
-## 5. Inference
+### 5. Inference
 ```bash
 ./scripts/5_inference/musdb18/inference.sh
+
+##
 ```
+
+## Results
+
+| Model      | Size         | SDR              | process 1s time (GPU) | process 1s time (CPU) |
+|------------|--------------|------------------|-----------|------------------|
+| ResUNet143 vocals      | 461 MB | 8.9 dB |
+| ResUNet143 acc. | 461 MB | 16.8 dB |
+| ResUNet143 Subband vocals       | 414 MB | 8.8 dB |
+| ResUNet143 Subband acc.  | 414 MB | 16.4 dB |
 
 ## Reference
 
-[1] Qiuqiang Kong, Yin Cao, Haohe Liu, Keunwoo Choi, Yuxuan Wang, Decoupling Magnitude and Phase Estimation with Deep ResUet for Music Source Separation, International Society for Music Information Retrieval (ISMIR), 2021.
+[1] Qiuqiang Kong, Yin Cao, Haohe Liu, Keunwoo Choi, Yuxuan Wang, Decoupling Magnitude and Phase Estimation with Deep ResUNet for Music Source Separation, International Society for Music Information Retrieval (ISMIR), 2021.
 ```
 @inproceedings{kong2021decoupling,
-  title={Decoupling Magnitude and Phase Estimation with Deep ResUet for Music Source Separation.},
+  title={Decoupling Magnitude and Phase Estimation with Deep ResUNet for Music Source Separation.},
   author={Kong, Qiuqiang and Cao, Yin and Liu, Haohe and Choi, Keunwoo and Wang, Yuxuan },
   booktitle={ISMIR},
   year={2021},
