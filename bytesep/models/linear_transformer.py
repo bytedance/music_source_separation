@@ -16,12 +16,18 @@ class LinearTransformerBlock(Module):
         self.activation = F.relu
 
     def forward(self, x):
-        x = x + self.dropout(self.attention(x, x, x,))
+        x = x + self.dropout(
+            self.attention(
+                x,
+                x,
+                x,
+            )
+        )
         y = x = self.norm1(x)
         y = self.dropout(self.activation(self.linear1(y)))
         y = self.dropout(self.linear2(y))
 
-        return self.norm2(x+y)
+        return self.norm2(x + y)
 
 
 class LinearAttention(Module):

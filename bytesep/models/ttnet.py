@@ -260,7 +260,7 @@ class TransformerEncoderLayer(nn.Module):
             stride=(self.stride, 1),
             padding=(self.padding, 0),
         )
-        
+
         self.trans = TransformerEncoderBuilder.from_kwargs(
             n_layers=1,
             n_heads=32,
@@ -276,7 +276,9 @@ class TransformerEncoderLayer(nn.Module):
         )
 
         # self.transformer_layer = LinearTransformer(self.out_channel)
-        self.transformer_layer = LinearTransformerBlock(d_model=self.out_channel, n_heads=8)
+        self.transformer_layer = LinearTransformerBlock(
+            d_model=self.out_channel, n_heads=8
+        )
 
     def forward(self, x):
         in_channel = x.size()[1]
@@ -317,8 +319,10 @@ class TransformerDecoderLayer(nn.Module):
         #     feed_forward_dimensions=self.in_channel * 4,
         #     attention_type="linear",
         # ).get()
-        
-        self.transformer_layer = LinearTransformerBlock(d_model=self.out_channel, n_heads=8)
+
+        self.transformer_layer = LinearTransformerBlock(
+            d_model=self.out_channel, n_heads=8
+        )
         self.pos = nn.Parameter(torch.zeros(1, self.kernel_size, self.in_channel))
 
         self.t_cnn = nn.ConvTranspose1d(
@@ -342,7 +346,10 @@ class TransformerDecoderLayer(nn.Module):
         #
         x = x.transpose(1, 2)  # (1, 16, 110592)
         x = self.t_cnn(x)
-        from IPython import embed; embed(using=False); os._exit(0)
+        from IPython import embed
+
+        embed(using=False)
+        os._exit(0)
 
         return x
 

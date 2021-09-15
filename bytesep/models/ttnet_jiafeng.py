@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
+
 # from fast_transformers.builders import TransformerEncoderBuilder
 import time
 from .linear_transformer import LinearTransformerBlock
 
 
 class JiafengCNN(nn.Module):
-    def __init__(self, input_channels,
-        target_sources_num, depth=6, use_trans=False):
+    def __init__(self, input_channels, target_sources_num, depth=6, use_trans=False):
         super(JiafengCNN, self).__init__()
 
         in_channels = 2
@@ -15,7 +15,7 @@ class JiafengCNN(nn.Module):
 
         num_heads = 32
         kernel_size = 8192
-        seq_len = 524288 // 2   # 262144
+        seq_len = 524288 // 2  # 262144
 
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
@@ -25,16 +25,32 @@ class JiafengCNN(nn.Module):
 
             # ------ encoder part ---------
             encode = []
-            encode += [nn.Conv1d(in_channels, channels, kernel_size=8, stride=4, padding=2), nn.ReLU()]
+            encode += [
+                nn.Conv1d(in_channels, channels, kernel_size=8, stride=4, padding=2),
+                nn.ReLU(),
+            ]
 
             if use_trans:
                 # adjust transformer input length for each layer
                 if seq_len > 2048:
-                    encode += [TransformerLayer(channels=channels, num_heads=num_heads, seq_len=kernel_size), nn.ReLU()]
+                    encode += [
+                        TransformerLayer(
+                            channels=channels, num_heads=num_heads, seq_len=kernel_size
+                        ),
+                        nn.ReLU(),
+                    ]
                 else:
-                    encode += [TransformerLayer(channels=channels, num_heads=num_heads, seq_len=seq_len), nn.ReLU()]
+                    encode += [
+                        TransformerLayer(
+                            channels=channels, num_heads=num_heads, seq_len=seq_len
+                        ),
+                        nn.ReLU(),
+                    ]
             else:
-                encode += [nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1), nn.ReLU()]
+                encode += [
+                    nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU(),
+                ]
 
             self.encoder.append(nn.Sequential(*encode))
             kernel_size = int(kernel_size // 2)
@@ -48,13 +64,30 @@ class JiafengCNN(nn.Module):
 
             if use_trans:
                 if seq_len > 2048:
-                    decode += [TransformerLayer(channels=channels, num_heads=num_heads, seq_len=kernel_size), nn.ReLU()]
+                    decode += [
+                        TransformerLayer(
+                            channels=channels, num_heads=num_heads, seq_len=kernel_size
+                        ),
+                        nn.ReLU(),
+                    ]
                 else:
-                    decode += [TransformerLayer(channels=channels, num_heads=num_heads, seq_len=seq_len), nn.ReLU()]
+                    decode += [
+                        TransformerLayer(
+                            channels=channels, num_heads=num_heads, seq_len=seq_len
+                        ),
+                        nn.ReLU(),
+                    ]
             else:
-                decode += [nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1), nn.ReLU()]
+                decode += [
+                    nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU(),
+                ]
 
-            decode += [nn.ConvTranspose1d(channels, out_channels, kernel_size=8, stride=4, padding=2)]
+            decode += [
+                nn.ConvTranspose1d(
+                    channels, out_channels, kernel_size=8, stride=4, padding=2
+                )
+            ]
 
             if index > 0:
                 decode.append(nn.ReLU())
@@ -64,11 +97,12 @@ class JiafengCNN(nn.Module):
             in_channels = channels
             channels = int(2 * channels)
 
-    def forward(self,
-                input_dict,
-                audio_input=None,
-                audio_target=None,
-                ):
+    def forward(
+        self,
+        input_dict,
+        audio_input=None,
+        audio_target=None,
+    ):
 
         # input shape: (1, 2, 442368)
         audio_input = input_dict['waveform']
@@ -98,8 +132,7 @@ class JiafengCNN(nn.Module):
 
 
 class JiafengTTNet(nn.Module):
-    def __init__(self, input_channels,
-        target_sources_num, depth=6, use_trans=True):
+    def __init__(self, input_channels, target_sources_num, depth=6, use_trans=True):
         super(JiafengTTNet, self).__init__()
 
         in_channels = 2
@@ -107,7 +140,7 @@ class JiafengTTNet(nn.Module):
 
         num_heads = 32
         kernel_size = 8192
-        seq_len = 524288 // 2   # 262144
+        seq_len = 524288 // 2  # 262144
 
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
@@ -117,16 +150,32 @@ class JiafengTTNet(nn.Module):
 
             # ------ encoder part ---------
             encode = []
-            encode += [nn.Conv1d(in_channels, channels, kernel_size=8, stride=4, padding=2), nn.ReLU()]
+            encode += [
+                nn.Conv1d(in_channels, channels, kernel_size=8, stride=4, padding=2),
+                nn.ReLU(),
+            ]
 
             if use_trans:
                 # adjust transformer input length for each layer
                 if seq_len > 2048:
-                    encode += [TransformerLayer(channels=channels, num_heads=num_heads, seq_len=kernel_size), nn.ReLU()]
+                    encode += [
+                        TransformerLayer(
+                            channels=channels, num_heads=num_heads, seq_len=kernel_size
+                        ),
+                        nn.ReLU(),
+                    ]
                 else:
-                    encode += [TransformerLayer(channels=channels, num_heads=num_heads, seq_len=seq_len), nn.ReLU()]
+                    encode += [
+                        TransformerLayer(
+                            channels=channels, num_heads=num_heads, seq_len=seq_len
+                        ),
+                        nn.ReLU(),
+                    ]
             else:
-                encode += [nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1), nn.ReLU()]
+                encode += [
+                    nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU(),
+                ]
 
             self.encoder.append(nn.Sequential(*encode))
             kernel_size = int(kernel_size // 2)
@@ -140,13 +189,30 @@ class JiafengTTNet(nn.Module):
 
             if use_trans:
                 if seq_len > 2048:
-                    decode += [TransformerLayer(channels=channels, num_heads=num_heads, seq_len=kernel_size), nn.ReLU()]
+                    decode += [
+                        TransformerLayer(
+                            channels=channels, num_heads=num_heads, seq_len=kernel_size
+                        ),
+                        nn.ReLU(),
+                    ]
                 else:
-                    decode += [TransformerLayer(channels=channels, num_heads=num_heads, seq_len=seq_len), nn.ReLU()]
+                    decode += [
+                        TransformerLayer(
+                            channels=channels, num_heads=num_heads, seq_len=seq_len
+                        ),
+                        nn.ReLU(),
+                    ]
             else:
-                decode += [nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1), nn.ReLU()]
+                decode += [
+                    nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU(),
+                ]
 
-            decode += [nn.ConvTranspose1d(channels, out_channels, kernel_size=8, stride=4, padding=2)]
+            decode += [
+                nn.ConvTranspose1d(
+                    channels, out_channels, kernel_size=8, stride=4, padding=2
+                )
+            ]
 
             if index > 0:
                 decode.append(nn.ReLU())
@@ -156,11 +222,12 @@ class JiafengTTNet(nn.Module):
             in_channels = channels
             channels = int(2 * channels)
 
-    def forward(self,
-                input_dict,
-                audio_input=None,
-                audio_target=None,
-                ):
+    def forward(
+        self,
+        input_dict,
+        audio_input=None,
+        audio_target=None,
+    ):
 
         # input shape: (1, 2, 442368)
         audio_input = input_dict['waveform']
@@ -190,12 +257,13 @@ class JiafengTTNet(nn.Module):
 
 
 class TransformerLayer(nn.Module):
-    def __init__(self,
-                 channels,
-                 num_heads,
-                 seq_len,
-                 padding=0,
-                 ):
+    def __init__(
+        self,
+        channels,
+        num_heads,
+        seq_len,
+        padding=0,
+    ):
         super(TransformerLayer, self).__init__()
         self.channels = channels
         self.num_heads = num_heads
@@ -203,7 +271,11 @@ class TransformerLayer(nn.Module):
 
         self.padding = padding
 
-        self.unfold = nn.Unfold(kernel_size=(self.seq_len, 1), stride=(self.seq_len, 1), padding=(self.padding, 0), )
+        self.unfold = nn.Unfold(
+            kernel_size=(self.seq_len, 1),
+            stride=(self.seq_len, 1),
+            padding=(self.padding, 0),
+        )
 
         self.trans = LinearTransformerBlock(self.channels, self.num_heads)
         self.pos = nn.Parameter(torch.zeros(1, self.seq_len, self.channels))
@@ -225,6 +297,7 @@ class TransformerLayer(nn.Module):
         x = x.transpose(1, 2)
 
         return x
+
 
 #
 # device = torch.device('cuda' if torch.cuda.is_available() else "cpu")
