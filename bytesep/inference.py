@@ -293,7 +293,7 @@ class SeparatorWrapper:
 
             os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
 
-            zenodo_dir = "https://zenodo.org/record/5507029/files"
+            zenodo_dir = "https://zenodo.org/record/5513378/files"
             zenodo_path = os.path.join(
                 zenodo_dir, "{}?download=1".format(checkpoint_bare_name)
             )

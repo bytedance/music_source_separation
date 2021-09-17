@@ -12,6 +12,8 @@ import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
 import os.path as op
+import pathlib
+import os
 from scipy.io import loadmat
 
 
@@ -42,7 +44,24 @@ class PQMF(nn.Module):
         self.ana_conv_filter = nn.Conv1d(
             1, out_channels=N, kernel_size=M, stride=N, bias=False
         )
-        data = load_mat2numpy(op.join(project_root, "f_" + self.name))
+
+        filters_dir = '{}/bytesep_data/filters'.format(str(pathlib.Path.home()))
+
+        for _name in ['f_4_64.mat', 'h_4_64.mat']:
+
+            _path = os.path.join(filters_dir, _name)
+
+            if not os.path.isfile(_path):
+                os.makedirs(os.path.dirname(_path), exist_ok=True)
+                remote_path = (
+                    "https://zenodo.org/record/5513378/files/{}?download=1".format(
+                        _name
+                    )
+                )
+                command_str = 'wget -O "{}" "{}"'.format(_path, remote_path)
+                os.system(command_str)
+
+        data = load_mat2numpy(op.join(filters_dir, "f_" + self.name))
         data = data['f'].astype(np.float32) / N
         data = np.flipud(data.T).T
         data = np.reshape(data, (N, 1, M)).copy()
@@ -55,7 +74,7 @@ class PQMF(nn.Module):
         self.syn_conv_filter = nn.Conv1d(
             N, out_channels=N, kernel_size=M // N, stride=1, bias=False
         )
-        gk = load_mat2numpy(op.join(project_root, "h_" + self.name))
+        gk = load_mat2numpy(op.join(filters_dir, "h_" + self.name))
         gk = gk['h'].astype(np.float32)
         gk = np.transpose(np.reshape(gk, (N, M // N, N)), (1, 0, 2)) * N
         gk = np.transpose(gk[::-1, :, :], (2, 1, 0)).copy()
