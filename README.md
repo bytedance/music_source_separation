@@ -2,6 +2,10 @@
 
 Music source separation is a task to separate audio recordings into individual sources. This repository is an PyTorch implmementation of music source separation. Users can separate their favorite songs into different sources by installing this repository. In addition, users can train their own music source separation systems using this repository. This repository also includes speech enhancement, instruments separation, etc.
 
+**New**
+- :white_check_mark: Integrated to [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio). See [Gradio Web Demo](https://huggingface.co/spaces/akhaliq/Music_Source_Separation).
+
+
 ## Demos
 
 Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
