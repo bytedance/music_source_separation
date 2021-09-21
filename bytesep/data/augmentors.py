@@ -47,7 +47,7 @@ class Augmentor:
 
     def pitch_shift(self, waveform: np.array, source_type: str) -> np.array:
         r"""Shift the pitch of a waveform. We use resampling for fast pitch
-        shifting, so the speed will also be chaneged. The length of the returned
+        shifting, so the speed will also be changed. The length of the returned
         waveform will be changed.
 
         Args:
