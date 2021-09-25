@@ -128,7 +128,7 @@ class Subband:
         r"""Warning!! This class is not used!!
 
         This class does not work as good as [1] which split subbands in the
-        time-domain. Please refere to [1] for formal implementation.
+        time-domain. Please refer to [1] for formal implementation.
 
         [1] Liu, Haohe, et al. "Channel-wise subband input for better voice and
         accompaniment separation on high resolution music." arXiv preprint arXiv:2008.05216 (2020).

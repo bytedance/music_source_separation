@@ -170,7 +170,7 @@ def train(args) -> NoReturn:
         config_yaml: str, path of config file for training
     """
 
-    # arugments & parameters
+    # arguments & parameters
     workspace = args.workspace
     gpus = args.gpus
     config_yaml = args.config_yaml
