@@ -6,6 +6,9 @@ Music source separation is a task to separate audio recordings into individual s
 
 Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
 
+## Google Colab for Inference
+[mss_inference_colab_vocals_spleeter.ipynb](https://colab.research.google.com/drive/1OO1SBkhwPG8GyNuY8GdUQEpJDiRLmHLW?usp=sharing#scrollTo=0CXFijV98PpG)
+
 ## Separation
 
 Users can easily separate their favorite audio recordings into vocals and accompaniment using the pretrained checkpoints.
