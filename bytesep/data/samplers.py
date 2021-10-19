@@ -119,9 +119,17 @@ class SegmentSampler:
                         self.pointers_dict[source_type] += 1
 
                         source_meta = self.meta_dict[source_type][index]
-                        # E.g., ['song_A.h5', 198450, 330750]
+                        # E.g., {
+                        #     'hdf5_path': 'xx/song_A.h5',
+                        #     'key_in_hdf5': 'vocals',
+                        #     'begin_sample': 13406400,
+                        #     'end_sample': 13538700,
+                        # }
 
-                        # source_metas.append(new_source_meta)
+                        source_meta['end_sample'] = (
+                            source_meta['begin_sample'] + self.segment_samples
+                        )
+
                         source_metas.append(source_meta)
 
                     batch_meta_dict[source_type].append(source_metas)

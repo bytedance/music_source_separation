@@ -26,11 +26,11 @@ def create_indexes(args) -> NoReturn:
     }
     """
 
-    # Arguments & parameters
+    # Arugments & parameters
     workspace = args.workspace
     config_yaml = args.config_yaml
 
-    # Only create indexes for training, because evaluation is on entire pieces.
+    # Only create indexes for training, because evalution is on entire pieces.
     split = "train"
 
     # Read config file.
@@ -69,7 +69,7 @@ def create_indexes(args) -> NoReturn:
         dataset_types = configs[split]["source_types"][source_type]
         # E.g., ['musdb18', ...]
 
-        # Each source can come from multiple datasets.
+        # Each source can come from mulitple datasets.
         for dataset_type in dataset_types:
 
             hdf5s_dir = os.path.join(
