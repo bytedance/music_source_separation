@@ -269,7 +269,7 @@ class SeparatorWrapper:
     def download_checkpoints(self, checkpoint_path, source_type):
 
         if source_type == "vocals":
-            checkpoint_bare_name = "resunet143_subbtandtime_vocals_8.8dB_350k_steps"
+            checkpoint_bare_name = "resunet143_subbtandtime_vocals_8.8dB_350k_steps.pth"
 
         elif source_type == "accompaniment":
             checkpoint_bare_name = (
@@ -280,7 +280,7 @@ class SeparatorWrapper:
             raise NotImplementedError
 
         if not checkpoint_path:
-            checkpoint_path = '{}/bytesep_data/{}.pth'.format(
+            checkpoint_path = '{}/bytesep_data/{}'.format(
                 str(pathlib.Path.home()), checkpoint_bare_name
             )
 
@@ -293,7 +293,7 @@ class SeparatorWrapper:
 
             os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
 
-            zenodo_dir = "https://zenodo.org/record/5507029/files"
+            zenodo_dir = "https://zenodo.org/record/5513378/files"
             zenodo_path = os.path.join(
                 zenodo_dir, "{}?download=1".format(checkpoint_bare_name)
             )
