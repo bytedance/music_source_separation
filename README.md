@@ -6,36 +6,29 @@ Music source separation is a task to separate audio recordings into individual s
 
 Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
 
-## Separation
-
-Users can easily separate their favorite audio recordings into vocals and accompaniment using the pretrained checkpoints.
-
-## Method 1. Separate by installing the package
+## Installation
 
 ```bash
-python3 setup.py install
+pip install bytesep
 ```
+
+## Separation
+Users can easily separate their favorite audio recordings into vocals or accompaniment using the pretrained checkpoints. The checkpoints are trained using only the training subset (100 songs) of the [Musdb18 dataset](https://sigsep.github.io/datasets/musdb.html).
 
 ```python
-python3 separate_scripts/separate.py 
-    --audio_path="./resources/vocals_accompaniment_10s.mp3" 
-    --source_type="accompaniment"
+python3 separate_scripts/separate.py \
+    --audio_path="./resources/vocals_accompaniment_10s.mp3" \
+    --source_type="accompaniment"	# "vocals" | "accompaniment"
 ```
 
-## Method 2. Separate by using the source code
+## Separation with More Models
 
-### 1. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Download checkpoints
+Download checkpoints.
 ```bash
 ./separate_scripts/download_checkpoints.sh
 ```
 
-### 3. Separate vocals and accompaniment
+Do separation.
 ```bash
 ./separate_scripts/separate_vocals.sh "resources/vocals_accompaniment_10s.mp3" "sep_vocals.mp3"
 ./separate_scripts/separate_accompaniment.sh "resources/vocals_accompaniment_10s.mp3" "sep_accompaniment.mp3"
@@ -97,11 +90,11 @@ We pack audio waveforms into hdf5 files to speed up training.
 | Model                     |  Size (MB) | SDR (dB)  | process 1s time (GPU Tesla V100) | process 1s time (CPU Core i7) |
 |---------------------------|------------|-----------|----------------------------------|-------------------------------|
 | ResUNet143 vocals         | 461        | 8.9       | 0.036                            | 2.513                         |
-| ResUNet143 acc.           | 461        | 16.8      | 0.036                            | 2.513                         |
 | ResUNet143 Subband vocals | 414        | 8.8       | 0.012                            | 0.614                         |
+| ResUNet143 acc.           | 461        | 16.8      | 0.036                            | 2.513                         |
 | ResUNet143 Subband acc.   | 414        | 16.4      | 0.012                            | 0.614                         |
 
-## Reference
+## Cite
 
 [1] Qiuqiang Kong, Yin Cao, Haohe Liu, Keunwoo Choi, Yuxuan Wang, Decoupling Magnitude and Phase Estimation with Deep ResUNet for Music Source Separation, International Society for Music Information Retrieval (ISMIR), 2021.
 ```
@@ -114,11 +107,21 @@ We pack audio waveforms into hdf5 files to speed up training.
 }
 ```
 
-## FAQ
+## Frequent Asked Questions (FAQ)
+[FAQ.md](FAQ.md)
 
-On Mac OSX, if users met "ModuleNotFoundError: No module named ..." error, then execute the following commands:
+## External Links
 
-```bash
-PYTHONPATH="./"
-export PYTHONPATH
-```
+Other open sourced music source separation projects include but not limited to:
+
+Subband ResUNet: [https://github.com/haoheliu/Subband-Music-Separation](https://github.com/haoheliu/Subband-Music-Separation)
+
+Demucs: [https://github.com/facebookresearch/demucs](https://github.com/facebookresearch/demucs)
+
+Spleeter: [https://github.com/deezer/spleeter](https://github.com/deezer/spleeter)
+
+Asteroid: [https://github.com/asteroid-team/asteroid](https://github.com/asteroid-team/asteroid)
+
+Open-Unmix: [https://github.com/sigsep/open-unmix-pytorch](https://github.com/sigsep/open-unmix-pytorch)
+
+Others
