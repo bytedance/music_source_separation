@@ -1,13 +1,13 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name='bytesep',
-    version='0.0.1',
+    version='0.0.2',
     description='Music source separation',
     author='ByteDance',
     url="https://github.com/bytedance/music_source_separation",
     license='Apache 2.0',
-    packages=['bytesep'],
+    packages=find_packages(),
     include_package_data=True,
     install_requires=[
         'torch==1.7.1',
