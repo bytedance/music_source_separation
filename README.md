@@ -9,7 +9,7 @@ Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
 ## Installation
 
 ```bash
-pip install bytesep
+pip install bytesep==0.1.1
 ```
 
 ## Separation
@@ -37,7 +37,7 @@ python3 -m bytesep separate \
 
 The currently supported source types include "vocals" and "accompaniment". Users could also plug this MSS system into their own programmes. See [example.py](./example.py) for examples.
 
-The separation models are trained ONLY on the [Musdb18 dataset](https://sigsep.github.io/datasets/musdb.html) (100 songs). Trained checkpoints can be downloaded at: [https://zenodo.org/record/5799080](https://zenodo.org/record/5799080).
+The separation models are trained ONLY on the [Musdb18 dataset](https://sigsep.github.io/datasets/musdb.html) (100 songs). Trained checkpoints can be downloaded at: [https://zenodo.org/record/5804160](https://zenodo.org/record/5804160).
 
 ## Train a music source separation system from scratch
 

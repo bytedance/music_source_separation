@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='bytesep',
-    version='0.1.0',
+    version='0.1.1',
     description='Music source separation',
     author='ByteDance',
     url="https://github.com/bytedance/music_source_separation",

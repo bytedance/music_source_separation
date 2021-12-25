@@ -16,17 +16,22 @@ def user_defined_build_separator() -> Separator:
         separator: Separator
     """
 
-    # model_type = "ResUNet143_Subbandtime"
-    model_type = "MobileNet_Subbandtime"
     input_channels = 2
     output_channels = 2
     target_sources_num = 1
     segment_samples = int(44100 * 30.)
     batch_size = 1
-    device = "cuda"
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    checkpoint_path = os.path.join(pathlib.Path.home(), "bytesep_data", "resunet143_subbtandtime_vocals_8.7dB_500k_steps_v2.pth")
-    checkpoint_path = os.path.join(pathlib.Path.home(), "bytesep_data", "mobilenet_subbtandtime_accompaniment_14.6dB_500k_steps_v2.pth")
+    model_type = "ResUNet143_Subbandtime"
+
+    if model_type == "ResUNet143_Subbandtime":
+        checkpoint_path = os.path.join(pathlib.Path.home(), "bytesep_data", 
+            "resunet143_subbtandtime_vocals_8.7dB_500k_steps_v2.pth")
+    
+    elif model_type == "MobileNet_Subbandtime":
+        checkpoint_path = os.path.join(pathlib.Path.home(), "bytesep_data", 
+            "mobilenet_subbtandtime_accompaniment_14.6dB_500k_steps_v2.pth")
 
     # Get model class.
     Model = get_model_class(model_type)
