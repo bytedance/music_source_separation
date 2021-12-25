@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "The dataset link is at https://datashare.ed.ac.uk/handle/10283/2791"
+echo "The dataset can be downloaded at https://datashare.ed.ac.uk/handle/10283/2791"
 
 # The downloaded Voicebank-DEMAND dataset looks like:
 # ./datasets/voicebank-demand

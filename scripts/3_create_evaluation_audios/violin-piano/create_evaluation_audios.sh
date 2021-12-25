@@ -7,7 +7,7 @@ SAMPLE_RATE=44100
 CHANNELS=2
 EVALUATION_SEGMENTS_NUM=100
 
-EVLUATION_AUDIOS_DIR="${WORKSPACE}/evaluation_audios/violin-piano"
+EVLUATION_AUDIOS_DIR="${WORKSPACE}/instruments_dataset/violin-piano"
 
 python3 bytesep/dataset_creation/create_evaluation_audios/violin-piano.py \
     --violin_dataset_dir=$VIOLIN_DATASET_DIR \

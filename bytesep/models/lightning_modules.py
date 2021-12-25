@@ -63,6 +63,34 @@ class LitSourceSeparation(pl.LightningModule):
         #     'waveform': (batch_size, target_sources_num * channels_num, segment_samples),
         # }
 
+        '''
+        import numpy as np
+        import librosa
+        import matplotlib.pyplot as plt
+        n = 1
+        in_wav = input_dict['waveform'].data.cpu().numpy()[n]
+        out_wav = target_dict['waveform'].data.cpu().numpy()[n]
+        in_sp = librosa.feature.melspectrogram(in_wav[0], sr=16000, n_fft=512, hop_length=160, n_mels=80, fmin=30, fmax=8000)
+        out_sp = librosa.feature.melspectrogram(out_wav[0], sr=16000, n_fft=512, hop_length=160, n_mels=80, fmin=30, fmax=8000)
+        out_sp2 = librosa.feature.melspectrogram(out_wav[1], sr=16000, n_fft=512, hop_length=160, n_mels=80, fmin=30, fmax=8000)
+        fig, axs = plt.subplots(3,1, sharex=True, figsize=(10, 8))
+        vmax = np.max(np.log(in_sp))
+        vmin = np.min(np.log(in_sp))
+        axs[0].matshow(np.log(in_sp), origin='lower', aspect='auto', cmap='jet', vmin=vmin, vmax=vmax)
+        axs[1].matshow(np.log(out_sp), origin='lower', aspect='auto', cmap='jet', vmin=vmin, vmax=vmax)
+        axs[2].matshow(np.log(out_sp2), origin='lower', aspect='auto', cmap='jet', vmin=vmin, vmax=vmax)
+        axs[0].grid(linestyle='solid', linewidth=0.3)
+        axs[1].grid(linestyle='solid', linewidth=0.3)
+        axs[2].grid(linestyle='solid', linewidth=0.3)
+        # axs[0].imshow(np.log(in_sp), interpolation='none')
+        # axs[1].imshow(np.log(out_sp), interpolation='none')
+        plt.savefig('_zz.pdf')
+        import soundfile
+        soundfile.write(file='_zz.wav', data=in_wav[0], samplerate=16000)
+        soundfile.write(file='_zz2.wav', data=out_wav[0], samplerate=16000)
+        from IPython import embed; embed(using=False); os._exit(0)
+        '''
+
         # Forward.
         self.model.train()
 
@@ -149,6 +177,16 @@ def get_model_class(model_type):
 
         return ResUNet143_Subbandtime
 
+    elif model_type == 'MobileNet_Subbandtime':
+        from bytesep.models.mobilenet_subbandtime import MobileNet_Subbandtime
+
+        return MobileNet_Subbandtime
+
+    elif model_type == 'MobileTiny_Subbandtime':
+        from bytesep.models.mobiletiny_subbandtime import MobileTiny_Subbandtime
+
+        return MobileTiny_Subbandtime
+
     elif model_type == 'ResUNet143_DecouplePlus':
         from bytesep.models.resunet import ResUNet143_DecouplePlus
 
@@ -184,5 +222,49 @@ def get_model_class(model_type):
 
         return TTnetNoTransformer
 
+    elif model_type == 'JiafengCNN':
+        from bytesep.models.ttnet_jiafeng import JiafengCNN
+
+        return JiafengCNN
+
+    elif model_type == 'JiafengTTNet':
+        from bytesep.models.ttnet_jiafeng import JiafengTTNet
+
+        return JiafengTTNet
+
+    elif model_type == 'ResUNet143FC_Subbandtime':
+        from bytesep.models.resunet_subbandtime2 import ResUNet143FC_Subbandtime
+
+        return ResUNet143FC_Subbandtime
+
+    elif model_type == 'AmbisonicToBinaural_UNetSubbandtimePhase':
+        from bytesep.models.ambisonic_to_binaural import (
+            AmbisonicToBinaural_UNetSubbandtimePhase,
+        )
+
+        return AmbisonicToBinaural_UNetSubbandtimePhase
+
+    elif model_type == 'AmbisonicToBinaural_ResUNetSubbandtimePhase':
+        from bytesep.models.ambisonic_to_binaural import (
+            AmbisonicToBinaural_ResUNetSubbandtimePhase,
+        )
+
+        return AmbisonicToBinaural_ResUNetSubbandtimePhase
+
+    elif model_type == 'MobileNetSubbandTime':
+        from bytesep.models.mobilenet_subbandtime import MobileNetSubbandTime
+
+        return MobileNetSubbandTime
+
+    elif model_type == 'WrapperDemucs':
+        from bytesep.models.demucs.demucs import WrapperDemucs
+
+        return WrapperDemucs
+
+    elif model_type == 'WrapperHDemucs':
+        from bytesep.models.demucs.hdemucs import WrapperHDemucs
+
+        return WrapperHDemucs
+
     else:
-        raise NotImplementedError
+        raise NotImplementedError("{} not implemented!".format(model_type))

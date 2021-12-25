@@ -1,6 +1,6 @@
 #!/bin/bash
 PIANO_DATASET_DIR=${1:-"./datasets/maestro"}
-SYMPHONY_DATASET_DIR=${2:-"./datasets/instruments_solo/symphony_solo/v0.1"}
+SYMPHONY_DATASET_DIR=${2:-"./datasets/instruments_dataset/symphony_solo/v0.1"}
 WORKSPACE=${3:-"./workspaces/bytesep"}
 
 SAMPLE_RATE=44100

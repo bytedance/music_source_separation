@@ -71,7 +71,11 @@ def load_audio(
 
 
 def load_random_segment(
-    audio_path: str, random_state, segment_seconds: float, mono: bool, sample_rate: int
+    audio_path: str,
+    random_state: int,
+    segment_seconds: float,
+    mono: bool,
+    sample_rate: int,
 ) -> np.array:
     r"""Randomly select an audio segment from a recording."""
 
@@ -103,8 +107,15 @@ def int16_to_float32(x: np.int16) -> np.float32:
     return (x / 32767.0).astype(np.float32)
 
 
-def read_yaml(config_yaml: str):
+def read_yaml(config_yaml: str) -> Dict:
+    """Read config file to dictionary.
 
+    Args:
+        config_yaml: str
+
+    Returns:
+        configs: Dict
+    """
     with open(config_yaml, "r") as fr:
         configs = yaml.load(fr, Loader=yaml.FullLoader)
 
@@ -113,20 +124,38 @@ def read_yaml(config_yaml: str):
 
 def check_configs_gramma(configs: Dict) -> NoReturn:
     r"""Check if the gramma of the config dictionary for training is legal."""
-    input_source_types = configs['train']['input_source_types']
 
-    for augmentation_type in configs['train']['augmentations'].keys():
-        augmentation_dict = configs['train']['augmentations'][augmentation_type]
+    paired_input_target_data = configs['train']['paired_input_target_data']
 
-        for source_type in augmentation_dict.keys():
-            if source_type not in input_source_types:
-                error_msg = (
-                    "The source type '{}'' in configs['train']['augmentations']['{}'] "
-                    "must be one of input_source_types {}".format(
-                        source_type, augmentation_type, input_source_types
+    if paired_input_target_data is False:
+
+        input_source_types = configs['train']['input_source_types']
+        augmentation_types = configs['train']['augmentations'].keys()
+
+        for augmentation_type in list(
+            set(augmentation_types)
+            & set(
+                [
+                    'mixaudio',
+                    'pitch_shift',
+                    'magnitude_scale',
+                    'swap_channel',
+                    'flip_axis',
+                ]
+            )
+        ):
+
+            augmentation_dict = configs['train']['augmentations'][augmentation_type]
+
+            for source_type in augmentation_dict.keys():
+                if source_type not in input_source_types:
+                    error_msg = (
+                        "The source type '{}'' in configs['train']['augmentations']['{}'] "
+                        "must be one of input_source_types {}".format(
+                            source_type, augmentation_type, input_source_types
+                        )
                     )
-                )
-                raise Exception(error_msg)
+                    raise Exception(error_msg)
 
 
 def magnitude_to_db(x: float) -> float:

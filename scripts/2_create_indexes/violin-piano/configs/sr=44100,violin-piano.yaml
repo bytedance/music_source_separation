@@ -1,0 +1,16 @@
+---
+sample_rate: 44100
+segment_seconds: 3.0
+train:
+    source_types:
+        violin:
+            instruments_solo:
+                hdf5s_directory: "hdf5s/instruments_dataset/violin_solo/sr=44100,chn=2/train"
+                key_in_hdf5: "violin"
+                hop_seconds: 0.1
+        piano:
+            maestro:
+                hdf5s_directory: "hdf5s/maestro/sr=44100,chn=2/train"
+                key_in_hdf5: "piano"
+                hop_seconds: 3.0
+    indexes: "indexes/violin-piano/train/sr=44100,violin-piano.pkl"

@@ -1,0 +1,16 @@
+---
+sample_rate: 44100
+segment_seconds: 3.0
+train:
+    source_types:
+        speech:
+            voicebank-demand:
+                hdf5s_directory: "hdf5s/voicebank-demand/sr=44100,chn=1/train"
+                key_in_hdf5: "speech"
+                hop_seconds: 3.
+        noise:
+            voicebank-demand:
+                hdf5s_directory: "hdf5s/voicebank-demand/sr=44100,chn=1/train"
+                key_in_hdf5: "noise"
+                hop_seconds: 3.
+    indexes: "indexes/voicebank-demand/train/sr=44100,speech-noise.pkl"

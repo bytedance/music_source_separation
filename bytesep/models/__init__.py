@@ -1,0 +1,1 @@
+from bytesep.models.lightning_modules import get_model_class

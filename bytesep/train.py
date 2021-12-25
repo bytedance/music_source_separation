@@ -3,36 +3,36 @@ import logging
 import os
 import pathlib
 from functools import partial
-from typing import List, NoReturn
+from typing import Dict, List, NoReturn
 
 import pytorch_lightning as pl
 from pytorch_lightning.plugins import DDPPlugin
+import torch
 
 from bytesep.callbacks import get_callbacks
 from bytesep.data.augmentors import Augmentor
-from bytesep.data.batch_data_preprocessors import (
-    get_batch_data_preprocessor_class,
-)
+from bytesep.data.batch_data_preprocessors import get_batch_data_preprocessor_class
 from bytesep.data.data_modules import DataModule, Dataset
 from bytesep.data.samplers import SegmentSampler
 from bytesep.losses import get_loss_function
-from bytesep.models.lightning_modules import (
-    LitSourceSeparation,
-    get_model_class,
-)
+from bytesep.models.lightning_modules import LitSourceSeparation, get_model_class
 from bytesep.optimizers.lr_schedulers import get_lr_lambda
 from bytesep.utils import (
+    check_configs_gramma,
     create_logging,
     get_pitch_shift_factor,
     read_yaml,
-    check_configs_gramma,
 )
 
 
 def get_dirs(
-    workspace: str, task_name: str, filename: str, config_yaml: str, gpus: int
+    workspace: str,
+    task_name: str,
+    filename: str,
+    config_yaml: str,
+    gpus: int,
 ) -> List[str]:
-    r"""Get directories.
+    r"""Get directory paths.
 
     Args:
         workspace: str
@@ -93,10 +93,13 @@ def get_dirs(
     return checkpoints_dir, logs_dir, logger, statistics_path
 
 
-def _get_data_module(
-    workspace: str, config_yaml: str, num_workers: int, distributed: bool
+def get_data_module(
+    workspace: str,
+    config_yaml: str,
+    num_workers: int,
+    distributed: bool,
 ) -> DataModule:
-    r"""Create data_module. Mini-batch data can be obtained by:
+    r"""Create data_module. Here is an example to fetch a mini-batch:
 
     code-block:: python
 
@@ -115,31 +118,38 @@ def _get_data_module(
     Returns:
         data_module: DataModule
     """
-
     configs = read_yaml(config_yaml)
     input_source_types = configs['train']['input_source_types']
-    indexes_path = os.path.join(workspace, configs['train']['indexes_dict'])
+    target_source_types = configs['train']['target_source_types']
+    paired_input_target_data = configs['train']['paired_input_target_data']
+    indexes_dict_path = os.path.join(workspace, configs['train']['indexes_dict_path'])
     sample_rate = configs['train']['sample_rate']
+    input_channels = configs['train']['input_channels']
     segment_seconds = configs['train']['segment_seconds']
-    mixaudio_dict = configs['train']['augmentations']['mixaudio']
     augmentations = configs['train']['augmentations']
-    max_pitch_shift = max(
-        [
-            augmentations['pitch_shift'][source_type]
-            for source_type in input_source_types
-        ]
-    )
     batch_size = configs['train']['batch_size']
     steps_per_epoch = configs['train']['steps_per_epoch']
 
     segment_samples = int(segment_seconds * sample_rate)
-    ex_segment_samples = int(segment_samples * get_pitch_shift_factor(max_pitch_shift))
+
+    if paired_input_target_data:
+        assert (
+            augmentations['remixing_sources'] is False
+        ), "Must set remixing_sources to False if input and target data are paired."
+
+    ex_segment_samples = get_pitch_shifted_segment_samples(
+        segment_samples=segment_samples,
+        augmentations=augmentations,
+    )
 
     # sampler
     train_sampler = SegmentSampler(
-        indexes_path=indexes_path,
+        indexes_dict_path=indexes_dict_path,
+        input_source_types=input_source_types,
+        target_source_types=target_source_types,
         segment_samples=ex_segment_samples,
-        mixaudio_dict=mixaudio_dict,
+        remixing_sources=augmentations['remixing_sources'],
+        mixaudio_dict=augmentations['mixaudio'],
         batch_size=batch_size,
         steps_per_epoch=steps_per_epoch,
     )
@@ -148,7 +158,14 @@ def _get_data_module(
     augmentor = Augmentor(augmentations=augmentations)
 
     # dataset
-    train_dataset = Dataset(augmentor, segment_samples)
+    train_dataset = Dataset(
+        input_source_types=input_source_types,
+        target_source_types=target_source_types,
+        paired_input_target_data=paired_input_target_data,
+        input_channels=input_channels,
+        augmentor=augmentor,
+        segment_samples=segment_samples,
+    )
 
     # data module
     data_module = DataModule(
@@ -161,6 +178,33 @@ def _get_data_module(
     return data_module
 
 
+def get_pitch_shifted_segment_samples(segment_samples: int, augmentations: Dict) -> int:
+    r"""Get new segment samples depending on maximum pitch shift.
+
+    Args:
+        segment_samples: int
+        augmentations: Dict
+
+    Returns:
+        ex_segment_samples: int
+    """
+
+    if 'pitch_shift' not in augmentations.keys():
+        return segment_samples
+
+    else:
+        pitch_shift_dict = augmentations['pitch_shift']
+        source_types = pitch_shift_dict.keys()
+
+    max_pitch_shift = max(
+        [pitch_shift_dict[source_type] for source_type in source_types]
+    )
+
+    ex_segment_samples = int(segment_samples * get_pitch_shift_factor(max_pitch_shift))
+
+    return ex_segment_samples
+
+
 def train(args) -> NoReturn:
     r"""Train & evaluate and save checkpoints.
 
@@ -170,7 +214,7 @@ def train(args) -> NoReturn:
         config_yaml: str, path of config file for training
     """
 
-    # arguments & parameters
+    # arugments & parameters
     workspace = args.workspace
     gpus = args.gpus
     config_yaml = args.config_yaml
@@ -184,9 +228,10 @@ def train(args) -> NoReturn:
     configs = read_yaml(config_yaml)
     check_configs_gramma(configs)
     task_name = configs['task_name']
+    input_source_types = configs['train']['input_source_types']
     target_source_types = configs['train']['target_source_types']
-    target_sources_num = len(target_source_types)
-    channels = configs['train']['channels']
+    input_channels = configs['train']['input_channels']
+    output_channels = configs['train']['output_channels']
     batch_data_preprocessor_type = configs['train']['batch_data_preprocessor']
     model_type = configs['train']['model_type']
     loss_type = configs['train']['loss_type']
@@ -196,6 +241,9 @@ def train(args) -> NoReturn:
     early_stop_steps = configs['train']['early_stop_steps']
     warm_up_steps = configs['train']['warm_up_steps']
     reduce_lr_steps = configs['train']['reduce_lr_steps']
+    resume_checkpoint_path = configs['train']['resume_checkpoint_path']
+
+    target_sources_num = len(target_source_types)
 
     # paths
     checkpoints_dir, logs_dir, logger, statistics_path = get_dirs(
@@ -203,7 +251,7 @@ def train(args) -> NoReturn:
     )
 
     # training data module
-    data_module = _get_data_module(
+    data_module = get_data_module(
         workspace=workspace,
         config_yaml=config_yaml,
         num_workers=num_workers,
@@ -216,12 +264,23 @@ def train(args) -> NoReturn:
     )
 
     batch_data_preprocessor = BatchDataPreprocessor(
-        target_source_types=target_source_types
+        input_source_types=input_source_types, target_source_types=target_source_types
     )
 
     # model
     Model = get_model_class(model_type=model_type)
-    model = Model(input_channels=channels, target_sources_num=target_sources_num)
+    model = Model(
+        input_channels=input_channels,
+        output_channels=output_channels,
+        target_sources_num=target_sources_num,
+    )
+
+    if resume_checkpoint_path:
+        checkpoint = torch.load(resume_checkpoint_path)
+        model.load_state_dict(checkpoint['model'])
+        logging.info(
+            "Load pretrained checkpoint from {}".format(resume_checkpoint_path)
+        )
 
     # loss function
     loss_function = get_loss_function(loss_type=loss_type)
@@ -264,7 +323,7 @@ def train(args) -> NoReturn:
         sync_batchnorm=True,
         precision=precision,
         replace_sampler_ddp=False,
-        plugins=[DDPPlugin(find_unused_parameters=True)],
+        plugins=[DDPPlugin(find_unused_parameters=False)],
         profiler='simple',
     )
 

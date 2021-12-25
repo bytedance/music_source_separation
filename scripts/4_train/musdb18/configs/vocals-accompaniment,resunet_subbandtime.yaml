@@ -6,15 +6,19 @@ train:
         - accompaniment
     target_source_types: 
         - vocals
-    indexes_dict: "indexes/musdb18/sr=44100_chn=2/train/full_train/vocals-accompaniment.pkl"
+    paired_input_target_data: False
+    indexes_dict_path: "indexes/musdb18/train/sr=44100,vocals-accompaniment.pkl"
     sample_rate: 44100
-    channels: 2
+    input_channels: 2
+    output_channels: 2
     segment_seconds: 3.0
+    batch_data_preprocessor: MixtureTarget
     model_type: ResUNet143_Subbandtime
     loss_type: l1_wav
     optimizer_type: Adam
     mini_data: False
     augmentations:
+        remixing_sources: True
         mixaudio:
             vocals: 2
             accompaniment: 2
@@ -34,8 +38,7 @@ train:
         flip_axis:
             vocals: False
             accompaniment: False
-    batch_data_preprocessor: BasicBatchDataPreprocessor
-    evaluation_callback: Musdb18EvaluationCallback
+    evaluation_callback: Musdb18
     learning_rate: 1e-3
     batch_size: 16
     precision: 32
@@ -46,7 +49,7 @@ train:
     warm_up_steps: 1000
     reduce_lr_steps: 15000
     random_seed: 1234
-    resume_checkpoint: ""
+    resume_checkpoint_path: ""
 
 evaluate:
     segment_seconds: 30.0

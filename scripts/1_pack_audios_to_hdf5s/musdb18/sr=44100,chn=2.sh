@@ -10,10 +10,7 @@ SAMPLE_RATE=44100
 CHANNELS=2
 
 # Paths
-PARENT_HDF5S_DIR="${WORKSPACE}/hdf5s/musdb18/sr=${SAMPLE_RATE}_chn=${CHANNELS}"
-
-# Pack train subset 100 pieces into hdf5 files.
-HDF5S_DIR="${PARENT_HDF5S_DIR}/train/full_train"
+HDF5S_DIR="${WORKSPACE}/hdf5s/musdb18/sr=${SAMPLE_RATE},chn=${CHANNELS}/train"
 
 python3 bytesep/dataset_creation/pack_audios_to_hdf5s/musdb18.py \
     --dataset_dir=$MUSDB18_DATASET_DIR \

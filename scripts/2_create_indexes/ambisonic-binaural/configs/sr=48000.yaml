@@ -1,0 +1,16 @@
+---
+sample_rate: 44100
+segment_seconds: 3.0
+train:
+    source_types:
+        ambisonic:
+            music:
+                hdf5s_directory: "hdf5s/ambisonic-binaural/sr=48000/train/ambisonic"
+                key_in_hdf5: "waveform"
+                hop_seconds: 0.1
+        binaural:
+            music:
+                hdf5s_directory: "hdf5s/ambisonic-binaural/sr=48000/train/binaural"
+                key_in_hdf5: "waveform"
+                hop_seconds: 0.1
+    indexes: "indexes/ambisonic-binaural/train/sr=48000.pkl"

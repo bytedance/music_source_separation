@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "The dataset link is at http://www.udialogue.org/download/VCTK-Corpus.tar.gz"
+echo "The dataset can be downloaded at http://www.udialogue.org/download/VCTK-Corpus.tar.gz"
 
 # The downloaded VCTK dataset looks like:
 # ./datasets/vctk

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-echo "The dataset link is created internally by kqq"
+echo "The dataset link is created internally by ByteDance."
 
 # The downloaded MAESTRO dataset looks like:
-# ./datasets/instruments
+# ./datasets/instruments_dataset
 # ├── violin_solo
 # │   └── v0.1
 # │       ├── mp3s (12 files)

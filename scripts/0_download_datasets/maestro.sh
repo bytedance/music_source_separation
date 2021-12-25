@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "The dataset link is at https://magenta.tensorflow.org/datasets/maestro"
+echo "The dataset can be downloaded at https://magenta.tensorflow.org/datasets/maestro"
 
 # The downloaded MAESTRO dataset looks like:
 # ./datasets/maestro

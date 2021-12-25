@@ -10,14 +10,12 @@ SAMPLE_RATE=44100
 CHANNELS=1
 
 # Paths
-PARENT_HDF5S_DIR="${WORKSPACE}/hdf5s/voicebank-demand/sr=${SAMPLE_RATE}_chn=${CHANNELS}"
-
-# Pack train subset 100 pieces into hdf5 files.
-HDF5S_DIR="${PARENT_HDF5S_DIR}/train"
+SPLIT="train"
+HDF5S_DIR="${WORKSPACE}/hdf5s/voicebank-demand/sr=${SAMPLE_RATE},chn=${CHANNELS}/${SPLIT}"
 
 python3 bytesep/dataset_creation/pack_audios_to_hdf5s/voicebank-demand.py \
     --dataset_dir=$DATASET_DIR \
-    --split="train" \
+    --split=$SPLIT \
     --hdf5s_dir=$HDF5S_DIR \
     --sample_rate=$SAMPLE_RATE \
     --channels=$CHANNELS
