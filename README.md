@@ -8,6 +8,8 @@ Vocals and accompaniment separation: https://www.youtube.com/watch?v=WH4m5HYzHsg
 
 ## Installation
 
+Install Python 3.7. Sometimes the installation of bytesep will fail when using higher versions of Python. Suggest to use conda (or other environment manage tools) to manage the packages.
+
 ```bash
 pip install bytesep==0.1.1
 ```
