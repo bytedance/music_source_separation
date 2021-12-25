@@ -11,9 +11,9 @@ import pytorch_lightning as pl
 import torch.nn as nn
 from pytorch_lightning.utilities import rank_zero_only
 
-from bytesep.callbacks.base_callbacks import SaveCheckpointsCallback
+from bytesep.callbacks.base import SaveCheckpointsCallback
 from bytesep.dataset_creation.pack_audios_to_hdf5s.musdb18 import preprocess_audio
-from bytesep.inference import Separator
+from bytesep.separate import Separator
 from bytesep.utils import StatisticsContainer, read_yaml
 
 
@@ -44,7 +44,7 @@ def get_musdb18_callbacks(
     task_name = configs['task_name']
     evaluation_callback = configs['train']['evaluation_callback']
     target_source_types = configs['train']['target_source_types']
-    input_channels = configs['train']['channels']
+    input_channels = configs['train']['input_channels']
     evaluation_audios_dir = os.path.join(workspace, "evaluation_audios", task_name)
     test_segment_seconds = configs['evaluate']['segment_seconds']
     sample_rate = configs['train']['sample_rate']
@@ -70,11 +70,11 @@ def get_musdb18_callbacks(
     # evaluation callback
     evaluate_train_callback = EvaluationCallback(
         dataset_dir=evaluation_audios_dir,
+        split='train',
         model=model,
         target_source_types=target_source_types,
-        input_channels=input_channels,
         sample_rate=sample_rate,
-        split='train',
+        input_channels=input_channels,
         segment_samples=test_segment_samples,
         batch_size=test_batch_size,
         device=evaluate_device,
@@ -85,11 +85,11 @@ def get_musdb18_callbacks(
 
     evaluate_test_callback = EvaluationCallback(
         dataset_dir=evaluation_audios_dir,
+        split='test',
         model=model,
         target_source_types=target_source_types,
-        input_channels=input_channels,
         sample_rate=sample_rate,
-        split='test',
+        input_channels=input_channels,
         segment_samples=test_segment_samples,
         batch_size=test_batch_size,
         device=evaluate_device,
@@ -106,10 +106,10 @@ def get_musdb18_callbacks(
 
 def _get_evaluation_callback_class(evaluation_callback) -> pl.Callback:
     r"""Get evaluation callback class."""
-    if evaluation_callback == "Musdb18EvaluationCallback":
+    if evaluation_callback == "Musdb18":
         return Musdb18EvaluationCallback
 
-    if evaluation_callback == 'Musdb18ConditionalEvaluationCallback':
+    if evaluation_callback == 'Musdb18Conditional':
         return Musdb18ConditionalEvaluationCallback
 
     else:
@@ -120,11 +120,11 @@ class Musdb18EvaluationCallback(pl.Callback):
     def __init__(
         self,
         dataset_dir: str,
+        split: str,
         model: nn.Module,
         target_source_types: str,
-        input_channels: int,
-        split: str,
         sample_rate: int,
+        input_channels: int,
         segment_samples: int,
         batch_size: int,
         device: str,
@@ -323,11 +323,11 @@ class Musdb18ConditionalEvaluationCallback(pl.Callback):
     def __init__(
         self,
         dataset_dir: str,
+        split: str,
         model: nn.Module,
         target_source_types: str,
-        input_channels: int,
-        split: str,
         sample_rate: int,
+        input_channels: int,
         segment_samples: int,
         batch_size: int,
         device: str,
@@ -339,11 +339,11 @@ class Musdb18ConditionalEvaluationCallback(pl.Callback):
 
         Args:
             dataset_dir: str
+            split: 'train' | 'test'
             model: nn.Module
             target_source_types: List[str], e.g., ['vocals', 'bass', ...]
-            input_channels: int
-            split: 'train' | 'test'
             sample_rate: int
+            input_channels: int
             segment_samples: int, length of segments to be input to a model, e.g., 44100*30
             batch_size, int, e.g., 12
             device: str, e.g., 'cuda'

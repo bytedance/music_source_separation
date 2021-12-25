@@ -2,7 +2,7 @@ import argparse
 import os
 import time
 from concurrent.futures import ProcessPoolExecutor
-from typing import NoReturn
+from typing import List, NoReturn
 
 import h5py
 import librosa
@@ -20,8 +20,8 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
 
     Args:
         dataset_dir: str
-        subset: str, 'train' | 'test'
-        split: str, '' | 'train' | 'valid'
+        subset: str, "train" | "test"
+        split: str, "" (100 files) | "train" (86 files) | "valid" (14 files)
         hdf5s_dir: str, directory to write out hdf5 files
         sample_rate: int
         channels_num: int
@@ -81,7 +81,7 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
     print("Pack hdf5 time: {:.3f} s".format(time.time() - pack_hdf5s_time))
 
 
-def write_single_audio_to_hdf5(param) -> NoReturn:
+def write_single_audio_to_hdf5(param: List) -> NoReturn:
     r"""Write single audio into hdf5 file."""
     (
         dataset_dir,
@@ -116,7 +116,6 @@ def write_single_audio_to_hdf5(param) -> NoReturn:
             audio = preprocess_audio(
                 audio, mono, track.rate, sample_rate, resample_type
             )
-            # audio = load_audio(audio_path=audio_path, mono=mono, sample_rate=sample_rate)
             # (channels_num, audio_samples) | (audio_samples,)
 
             hf.create_dataset(
@@ -136,7 +135,9 @@ def write_single_audio_to_hdf5(param) -> NoReturn:
     print("{} Write to {}, {}".format(track_index, hdf5_path, audio.shape))
 
 
-def preprocess_audio(audio, mono, origin_sr, sr, resample_type) -> np.array:
+def preprocess_audio(
+    audio: np.array, mono: bool, origin_sr: float, sr: float, resample_type: str
+) -> np.array:
     r"""Preprocess audio to mono / stereo, and resample.
 
     Args:

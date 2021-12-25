@@ -8,8 +8,11 @@ import torch.distributed as dist
 class SegmentSampler:
     def __init__(
         self,
-        indexes_path: str,
+        indexes_dict_path: str,
+        input_source_types: List[str],
+        target_source_types: List[str],
         segment_samples: int,
+        remixing_sources: bool,
         mixaudio_dict: Dict,
         batch_size: int,
         steps_per_epoch: int,
@@ -19,33 +22,36 @@ class SegmentSampler:
 
         Args:
             indexes_path: str, path of indexes dict
+            input_source_types: list of str, e.g., ['vocals', 'accompaniment']
+            target_source_types: list of str, e.g., ['vocals']
             segment_samplers: int
-            mixaudio_dict, dict, including hyper-parameters for mix-audio data
-                augmentation, e.g., {'voclas': 2, 'accompaniment': 2}
+            mixaudio_dict, dict, mix-audio data augmentation parameters,
+                e.g., {'voclas': 2, 'accompaniment': 2}
             batch_size: int
             steps_per_epoch: int, #steps_per_epoch is called an `epoch`
             random_seed: int
         """
         self.segment_samples = segment_samples
         self.mixaudio_dict = mixaudio_dict
+        self.remixing_sources = remixing_sources
         self.batch_size = batch_size
         self.steps_per_epoch = steps_per_epoch
 
-        self.meta_dict = pickle.load(open(indexes_path, "rb"))
+        self.meta_dict = pickle.load(open(indexes_dict_path, "rb"))
         # E.g., {
         #     'vocals': [
         #         {'hdf5_path': 'songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0, 'end_sample': 132300}，
         #         {'hdf5_path': 'songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4410, 'end_sample': 445410},
-        #         ...
+        #         ... (e.g., 225752 dicts)
         #     ],
         #     'accompaniment': [
         #         {'hdf5_path': 'songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0, 'end_sample': 132300}，
         #         {'hdf5_path': 'songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4410, 'end_sample': 445410},
-        #         ...
+        #         ... (e.g., 225752 dicts)
         #     ]
         # }
 
-        self.source_types = self.meta_dict.keys()
+        self.source_types = list(set(input_source_types) | set(target_source_types))
         # E.g., ['vocals', 'accompaniment']
 
         self.pointers_dict = {source_type: 0 for source_type in self.source_types}
@@ -60,11 +66,26 @@ class SegmentSampler:
         #     'accompaniment': [0, 1, ..., 225751]
         # }
 
-        self.random_state = np.random.RandomState(random_seed)
+        random_state = np.random.RandomState(random_seed)
+        self.random_state_dict = {}
 
-        # Shuffle indexes.
         for source_type in self.source_types:
-            self.random_state.shuffle(self.indexes_dict[source_type])
+
+            if remixing_sources:
+                # Use different seeds for different sources.
+                source_random_seed = random_state.randint(low=0, high=10000)
+
+            else:
+                # Use same seeds for different sources.
+                source_random_seed = random_seed
+
+            self.random_state_dict[source_type] = np.random.RandomState(
+                source_random_seed
+            )
+
+            self.random_state_dict[source_type].shuffle(self.indexes_dict[source_type])
+            # E.g., [198036, 196736, ..., 103408]
+
             print("{}: {}".format(source_type, len(self.indexes_dict[source_type])))
 
     def __iter__(self) -> List[Dict]:
@@ -78,7 +99,7 @@ class SegmentSampler:
                 'accompaniment': [
                     {'hdf5_path': 'songE.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 14579460, 'end_sample': 14711760},
                     {'hdf5_path': 'songF.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 3995460, 'end_sample': 4127760}]
-                }
+                },
                 ...
             ]
         """
@@ -93,20 +114,24 @@ class SegmentSampler:
                 # Loop until get a mini-batch.
                 while len(batch_meta_dict[source_type]) != batch_size:
 
-                    largest_index = (
-                        len(self.indexes_dict[source_type])
-                        - self.mixaudio_dict[source_type]
-                    )
+                    if source_type in self.mixaudio_dict.keys():
+                        mix_audios_num = self.mixaudio_dict[source_type]
+
+                    else:
+                        mix_audios_num = 1
+
+                    largest_index = len(self.indexes_dict[source_type]) - mix_audios_num
                     # E.g., 225750 = 225752 - 2
 
                     if self.pointers_dict[source_type] > largest_index:
 
                         # Reset pointer, and shuffle indexes.
                         self.pointers_dict[source_type] = 0
-                        self.random_state.shuffle(self.indexes_dict[source_type])
+                        self.random_state_dict[source_type].shuffle(
+                            self.indexes_dict[source_type]
+                        )
 
                     source_metas = []
-                    mix_audios_num = self.mixaudio_dict[source_type]
 
                     for _ in range(mix_audios_num):
 
@@ -123,9 +148,9 @@ class SegmentSampler:
                         #     'hdf5_path': 'xx/song_A.h5',
                         #     'key_in_hdf5': 'vocals',
                         #     'begin_sample': 13406400,
-                        #     'end_sample': 13538700,
                         # }
 
+                        # Re-assign the end_sample.
                         source_meta['end_sample'] = (
                             source_meta['begin_sample'] + self.segment_samples
                         )
@@ -133,18 +158,19 @@ class SegmentSampler:
                         source_metas.append(source_meta)
 
                     batch_meta_dict[source_type].append(source_metas)
+
             # When mix-audio is 2, batch_meta_dict looks like: {
             #     'vocals': [
             #         [{'hdf5_path': 'songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 13406400, 'end_sample': 13538700},
-            #          {'hdf5_path': 'songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4440870, 'end_sample': 4573170}],
-            #         [{'hdf5_path': 'songC.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 1186290, 'end_sample': 1318590},
-            #          {'hdf5_path': 'songD.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 8462790, 'end_sample': 8595090}]
+            #          {'hdf5_path': 'songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4440870, 'end_sample': 4573170}
+            #         ],
+            #         ... (batch_size)
             #     ]
             #     'accompaniment': [
-            #         [{'hdf5_path': 'songE.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 24232950, 'end_sample': 24365250},
-            #          {'hdf5_path': 'songF.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 1569960, 'end_sample': 1702260}],
-            #         [{'hdf5_path': 'songG.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 2795940, 'end_sample': 2928240},
-            #          {'hdf5_path': 'songH.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 10923570, 'end_sample': 11055870}]
+            #         [{'hdf5_path': 'songG.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 24232950, 'end_sample': 24365250},
+            #          {'hdf5_path': 'songH.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 1569960, 'end_sample': 1702260}
+            #         ],
+            #         ... (batch_size)
             #     ]
             # }
 
@@ -163,7 +189,7 @@ class SegmentSampler:
             #         {'hdf5_path': 'songE.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 14579460, 'end_sample': 14711760},
             #         {'hdf5_path': 'songF.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 3995460, 'end_sample': 4127760}]
             #     }
-            #     ...
+            #     ... (batch_size)
             # ]
 
             yield batch_meta_list
@@ -185,12 +211,26 @@ class DistributedSamplerWrapper:
         r"""Distributed wrapper of sampler."""
         self.sampler = sampler
 
-    def __iter__(self):
-        num_replicas = dist.get_world_size()
-        rank = dist.get_rank()
+    def __iter__(self) -> List[Dict]:
 
-        for indices in self.sampler:
-            yield indices[rank::num_replicas]
+        num_replicas = dist.get_world_size()  # number of GPUs.
+        rank = dist.get_rank()  # rank of current GPU
+
+        for batch_meta_list in self.sampler:
+
+            # When mix-audio is 2, batch_meta_list looks like: [
+            #     {'vocals': [
+            #         {'hdf5_path': 'songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 13406400, 'end_sample': 13538700},
+            #         {'hdf5_path': 'songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4440870, 'end_sample': 4573170}]
+            #      'accompaniment': [
+            #         {'hdf5_path': 'songE.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 14579460, 'end_sample': 14711760},
+            #         {'hdf5_path': 'songF.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 3995460, 'end_sample': 4127760}]
+            #     }
+            #     ... (batch_size)
+            # ]
+
+            # Yield a subset of batch_meta_list on one GPU.
+            yield batch_meta_list[rank::num_replicas]
 
     def __len__(self) -> int:
         return len(self.sampler)

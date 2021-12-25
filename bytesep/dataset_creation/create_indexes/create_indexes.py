@@ -14,13 +14,13 @@ def create_indexes(args) -> NoReturn:
     be shuffled and iterated for selecting segments to be mixed. E.g., the
     training indexes_dict looks like: {
         'vocals': [
-            {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0, 'end_sample': 132300}
-            {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4410, 'end_sample': 136710}
+            {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0}
+            {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4410}
             ...
         ]
         'accompaniment': [
-            {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 0, 'end_sample': 132300}
-            {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 4410, 'end_sample': 136710}
+            {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 0}
+            {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 4410}
             ...
         ]
     }
@@ -49,13 +49,13 @@ def create_indexes(args) -> NoReturn:
     indexes_dict = {source_type: [] for source_type in source_types}
     # E.g., indexes_dict will looks like: {
     #     'vocals': [
-    #         {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0, 'end_sample': 132300}
-    #         {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4410, 'end_sample': 136710}
+    #         {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 0}
+    #         {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'vocals', 'begin_sample': 4410}
     #         ...
     #     ]
     #     'accompaniment': [
-    #         {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 0, 'end_sample': 132300}
-    #         {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 4410, 'end_sample': 136710}
+    #         {'hdf5_path': '.../songA.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 0}
+    #         {'hdf5_path': '.../songB.h5', 'key_in_hdf5': 'accompaniment', 'begin_sample': 4410}
     #         ...
     #     ]
     # }
@@ -84,6 +84,8 @@ def create_indexes(args) -> NoReturn:
             hdf5_names = sorted(os.listdir(hdf5s_dir))
             print("Hdf5 files num: {}".format(len(hdf5_names)))
 
+            count = 0
+
             # Traverse all packed hdf5 files of a dataset.
             for n, hdf5_name in enumerate(hdf5_names):
 
@@ -98,11 +100,11 @@ def create_indexes(args) -> NoReturn:
                             'hdf5_path': hdf5_path,
                             'key_in_hdf5': key_in_hdf5,
                             'begin_sample': bgn_sample,
-                            'end_sample': bgn_sample + segment_samples,
                         }
                         indexes_dict[source_type].append(meta)
 
                         bgn_sample += hop_samples
+                        count += 1
 
                     # If the audio length is shorter than the segment length,
                     # then use the entire audio as a segment.
@@ -111,9 +113,10 @@ def create_indexes(args) -> NoReturn:
                             'hdf5_path': hdf5_path,
                             'key_in_hdf5': key_in_hdf5,
                             'begin_sample': 0,
-                            'end_sample': segment_samples,
                         }
                         indexes_dict[source_type].append(meta)
+
+            print("{} indexes: {}".format(dataset_type, count))
 
         print(
             "Total indexes for {}: {}".format(

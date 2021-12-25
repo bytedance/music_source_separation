@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from pytorch_lightning.core.datamodule import LightningDataModule
 
+from bytesep.data.augmentors import Augmentor
 from bytesep.data.samplers import DistributedSamplerWrapper
 from bytesep.utils import int16_to_float32
 
@@ -35,9 +36,10 @@ class DataModule(LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> NoReturn:
         r"""called on every device."""
 
-        # SegmentSampler is used for selecting segments for training.
+        # SegmentSampler is used for sampling segment indexes for training.
         # On multiple devices, each SegmentSampler samples a part of mini-batch
         # data.
+
         if self.distributed:
             self.train_sampler = DistributedSamplerWrapper(self._train_sampler)
 
@@ -58,15 +60,35 @@ class DataModule(LightningDataModule):
 
 
 class Dataset:
-    def __init__(self, augmentor: object, segment_samples: int):
+    def __init__(
+        self,
+        input_source_types: List[str],
+        target_source_types: List[str],
+        paired_input_target_data: bool,
+        input_channels: int,
+        augmentor: Augmentor,
+        segment_samples: int,
+    ):
         r"""Used for getting data according to a meta.
 
         Args:
-            augmentor: Augmentor class
+            input_source_types: list of str, e.g., ['vocals', 'accompaniment']
+            target_source_types: list of str, e.g., ['vocals']
+            input_channels: int
+            augmentor: Augmentor
             segment_samples: int
         """
+        self.input_source_types = input_source_types
+        self.paired_input_target_data = paired_input_target_data
+        self.input_channels = input_channels
         self.augmentor = augmentor
         self.segment_samples = segment_samples
+
+        if paired_input_target_data:
+            self.source_types = list(set(input_source_types) | set(target_source_types))
+
+        else:
+            self.source_types = input_source_types
 
     def __getitem__(self, meta: Dict) -> Dict:
         r"""Return data according to a meta. E.g., an input meta looks like: {
@@ -91,11 +113,10 @@ class Dataset:
                 'mixture': (channels, segments_num),
             }
         """
-        source_types = meta.keys()
         data_dict = {}
 
-        for source_type in source_types:
-            # E.g., ['vocals', 'bass', ...]
+        for source_type in self.source_types:
+            # E.g., ['vocals', 'accompaniment']
 
             waveforms = []  # Audio segments to be mix-audio augmented.
 
@@ -125,34 +146,64 @@ class Dataset:
                             hf[key_in_hdf5][:, bgn_sample:end_sample]
                         )
 
+                if self.paired_input_target_data:
+                    # TODO
+                    pass
+
+                else:
                     if self.augmentor:
                         waveform = self.augmentor(waveform, source_type)
 
-                    waveform = librosa.util.fix_length(
-                        waveform, size=self.segment_samples, axis=1
+                if source_type in self.input_source_types:
+                    waveform = self.match_waveform_to_input_channels(
+                        waveform=waveform, input_channels=self.input_channels
                     )
-                    # (channels_num, segments_num)
+                    # (input_channels, segments_num)
+
+                waveform = librosa.util.fix_length(
+                    waveform, size=self.segment_samples, axis=1
+                )
 
                 waveforms.append(waveform)
-            # E.g., waveforms: [(channels_num, audio_samples), (channels_num, audio_samples)]
+            # E.g., waveforms: [(input_channels, audio_samples), (input_channels, audio_samples)]
 
             # mix-audio augmentation
             data_dict[source_type] = np.sum(waveforms, axis=0)
-            # data_dict[source_type]: (channels_num, audio_samples)
+            # data_dict[source_type]: (input_channels, audio_samples)
 
         # data_dict looks like: {
-        #     'voclas': (channels_num, audio_samples),
-        #     'accompaniment': (channels_num, audio_samples)
+        #     'voclas': (input_channels, audio_samples),
+        #     'accompaniment': (input_channels, audio_samples)
         # }
 
-        # Mix segments from different sources.
-        mixture = np.sum(
-            [data_dict[source_type] for source_type in source_types], axis=0
-        )
-        data_dict['mixture'] = mixture
-        # shape: (channels_num, audio_samples)
-
         return data_dict
+
+    def match_waveform_to_input_channels(
+        self,
+        waveform: np.array,
+        input_channels: int,
+    ) -> np.array:
+        r"""Match waveform to channels num.
+
+        Args:
+            waveform: (input_channels, segments_num)
+            input_channels: int
+
+        Outputs:
+            output: (new_input_channels, segments_num)
+        """
+        waveform_channels = waveform.shape[0]
+
+        if waveform_channels == input_channels:
+            return waveform
+
+        elif waveform_channels < input_channels:
+            assert waveform_channels == 1
+            return np.tile(waveform, (input_channels, 1))
+
+        else:
+            assert input_channels == 1
+            return np.mean(waveform, axis=0)[None, :]
 
 
 def collate_fn(list_data_dict: List[Dict]) -> Dict:
@@ -160,21 +211,21 @@ def collate_fn(list_data_dict: List[Dict]) -> Dict:
 
     Args:
         list_data_dict: e.g., [
-            {'vocals': (channels_num, segment_samples),
-             'accompaniment': (channels_num, segment_samples),
-             'mixture': (channels_num, segment_samples)
+            {'vocals': (input_channels, segment_samples),
+             'accompaniment': (input_channels, segment_samples),
+             'mixture': (input_channels, segment_samples)
             },
-            {'vocals': (channels_num, segment_samples),
-             'accompaniment': (channels_num, segment_samples),
-             'mixture': (channels_num, segment_samples)
+            {'vocals': (input_channels, segment_samples),
+             'accompaniment': (input_channels, segment_samples),
+             'mixture': (input_channels, segment_samples)
             },
             ...]
 
     Returns:
         data_dict: e.g. {
-            'vocals': (batch_size, channels_num, segment_samples),
-            'accompaniment': (batch_size, channels_num, segment_samples),
-            'mixture': (batch_size, channels_num, segment_samples)
+            'vocals': (batch_size, input_channels, segment_samples),
+            'accompaniment': (batch_size, input_channels, segment_samples),
+            'mixture': (batch_size, input_channels, segment_samples)
             }
     """
     data_dict = {}

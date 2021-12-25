@@ -38,6 +38,8 @@ def pack_audios_to_hdf5s(args) -> NoReturn:
     # Only pack data for training data.
     assert split == "train"
 
+    assert channels == 1
+
     audios_dir = os.path.join(dataset_dir, 'wav48', split)
     os.makedirs(hdf5s_dir, exist_ok=True)
 

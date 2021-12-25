@@ -32,3 +32,16 @@ Solution
 
 Try to use python 3.7. This error sometimes occur when using python 3.9.
 
+## Question
+
+If users met this error:
+
+```
+horovod.common.exceptions.HorovodVersionMismatchError:
+```
+
+Solution
+
+```
+pip uninstall horovod
+```

@@ -12,7 +12,7 @@ import pandas as pd
 from bytesep.utils import float32_to_int16, load_audio
 
 
-def read_csv(meta_csv) -> Dict:
+def read_csv(meta_csv: str) -> Dict:
     r"""Get train & test names from csv.
 
     Args:

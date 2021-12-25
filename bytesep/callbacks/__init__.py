@@ -58,11 +58,32 @@ def get_callbacks(
             evaluate_device=evaluate_device,
         )
 
-    elif task_name in ['vctk-musdb18', 'violin-piano', 'piano-symphony']:
+    elif task_name in [
+        'vctk-musdb18',
+        'violin-piano',
+        'piano-symphony',
+        'vctk-musdb18-audioset',
+    ]:
 
-        from bytesep.callbacks.instruments_callbacks import get_instruments_callbacks
+        from bytesep.callbacks.instruments import get_instruments_callbacks
 
         return get_instruments_callbacks(
+            config_yaml=config_yaml,
+            workspace=workspace,
+            checkpoints_dir=checkpoints_dir,
+            statistics_path=statistics_path,
+            logger=logger,
+            model=model,
+            evaluate_device=evaluate_device,
+        )
+
+    elif task_name in ['ambisonic-binaural']:
+
+        from bytesep.callbacks.ambisonic_binaural import (
+            get_ambisonic_binaural_callbacks,
+        )
+
+        return get_ambisonic_binaural_callbacks(
             config_yaml=config_yaml,
             workspace=workspace,
             checkpoints_dir=checkpoints_dir,

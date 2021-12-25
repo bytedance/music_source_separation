@@ -5,18 +5,16 @@ from typing import List, NoReturn
 
 import librosa
 import numpy as np
-import pysepm
 import pytorch_lightning as pl
 import torch.nn as nn
-from pesq import pesq
 from pytorch_lightning.utilities import rank_zero_only
 
 from bytesep.callbacks.base import SaveCheckpointsCallback
 from bytesep.separate import Separator
-from bytesep.utils import StatisticsContainer, read_yaml
+from bytesep.utils import StatisticsContainer, calculate_sdr, read_yaml
 
 
-def get_voicebank_demand_callbacks(
+def get_instruments_callbacks(
     config_yaml: str,
     workspace: str,
     checkpoints_dir: str,
@@ -43,7 +41,8 @@ def get_voicebank_demand_callbacks(
     task_name = configs['task_name']
     target_source_types = configs['train']['target_source_types']
     input_channels = configs['train']['input_channels']
-    evaluation_audios_dir = os.path.join(workspace, "evaluation_audios", task_name)
+    mono = True if input_channels == 1 else False
+    test_audios_dir = os.path.join(workspace, "evaluation_audios", task_name, "test")
     sample_rate = configs['train']['sample_rate']
     evaluate_step_frequency = configs['train']['evaluate_step_frequency']
     save_step_frequency = configs['train']['save_step_frequency']
@@ -53,7 +52,6 @@ def get_voicebank_demand_callbacks(
     test_segment_samples = int(test_segment_seconds * sample_rate)
     assert len(target_source_types) == 1
     target_source_type = target_source_types[0]
-    assert target_source_type == 'speech'
 
     # save checkpoint callback
     save_checkpoints_callback = SaveCheckpointsCallback(
@@ -67,10 +65,12 @@ def get_voicebank_demand_callbacks(
 
     # evaluation callback
     evaluate_test_callback = EvaluationCallback(
-        evaluation_audios_dir=evaluation_audios_dir,
-        sample_rate=sample_rate,
         model=model,
+        target_source_type=target_source_type,
         input_channels=input_channels,
+        sample_rate=sample_rate,
+        mono=mono,
+        evaluation_audios_dir=test_audios_dir,
         segment_samples=test_segment_samples,
         batch_size=test_batch_size,
         device=evaluate_device,
@@ -80,6 +80,7 @@ def get_voicebank_demand_callbacks(
     )
 
     callbacks = [save_checkpoints_callback, evaluate_test_callback]
+    # callbacks = [save_checkpoints_callback]
 
     return callbacks
 
@@ -87,10 +88,12 @@ def get_voicebank_demand_callbacks(
 class EvaluationCallback(pl.Callback):
     def __init__(
         self,
-        evaluation_audios_dir: str,
         model: nn.Module,
-        sample_rate: int,
         input_channels: int,
+        evaluation_audios_dir: str,
+        target_source_type: str,
+        sample_rate: int,
+        mono: bool,
         segment_samples: int,
         batch_size: int,
         device: str,
@@ -101,10 +104,12 @@ class EvaluationCallback(pl.Callback):
         r"""Callback to evaluate every #save_step_frequency steps.
 
         Args:
-            evaluation_audios_dir: str, directory containing audios for evaluation
             model: nn.Module
-            sample_rate: int
             input_channels: int
+            evaluation_audios_dir: str, directory containing audios for evaluation
+            target_source_type: str, e.g., 'violin'
+            sample_rate: int
+            mono: bool
             segment_samples: int, length of segments to be input to a model, e.g., 44100*30
             batch_size, int, e.g., 12
             device: str, e.g., 'cuda'
@@ -113,18 +118,15 @@ class EvaluationCallback(pl.Callback):
             statistics_container: StatisticsContainer
         """
         self.model = model
-        self.mono = True
+        self.target_source_type = target_source_type
         self.sample_rate = sample_rate
+        self.mono = mono
         self.segment_samples = segment_samples
         self.evaluate_step_frequency = evaluate_step_frequency
         self.logger = logger
         self.statistics_container = statistics_container
 
-        self.clean_dir = os.path.join(evaluation_audios_dir, "clean_testset_wav")
-        self.noisy_dir = os.path.join(evaluation_audios_dir, "noisy_testset_wav")
-
-        self.EVALUATION_SAMPLE_RATE = 16000  # Evaluation sample rate of the
-        # Voicebank-Demand task.
+        self.evaluation_audios_dir = evaluation_audios_dir
 
         # separator
         self.separator = Separator(model, self.segment_samples, batch_size, device)
@@ -139,93 +141,60 @@ class EvaluationCallback(pl.Callback):
 
         if global_step % self.evaluate_step_frequency == 0:
 
-            audio_names = sorted(
-                [
-                    audio_name
-                    for audio_name in sorted(os.listdir(self.clean_dir))
-                    if audio_name.endswith('.wav')
-                ]
+            mixture_audios_dir = os.path.join(self.evaluation_audios_dir, 'mixture')
+            clean_audios_dir = os.path.join(
+                self.evaluation_audios_dir, self.target_source_type
             )
+
+            audio_names = sorted(os.listdir(mixture_audios_dir))
 
             error_str = "Directory {} does not contain audios for evaluation!".format(
-                self.clean_dir
+                self.evaluation_audios_dir
             )
             assert len(audio_names) > 0, error_str
-
-            pesqs, csigs, cbaks, covls, ssnrs = [], [], [], [], []
 
             logging.info("--- Step {} ---".format(global_step))
             logging.info("Total {} pieces for evaluation:".format(len(audio_names)))
 
             eval_time = time.time()
 
+            sdrs = []
+
             for n, audio_name in enumerate(audio_names):
 
                 # Load audio.
-                clean_path = os.path.join(self.clean_dir, audio_name)
-                mixture_path = os.path.join(self.noisy_dir, audio_name)
+                mixture_path = os.path.join(mixture_audios_dir, audio_name)
+                clean_path = os.path.join(clean_audios_dir, audio_name)
 
-                mixture, _ = librosa.core.load(
+                mixture, origin_fs = librosa.core.load(
                     mixture_path, sr=self.sample_rate, mono=self.mono
+                )
+
+                # Target
+                clean, origin_fs = librosa.core.load(
+                    clean_path, sr=self.sample_rate, mono=self.mono
                 )
 
                 if mixture.ndim == 1:
                     mixture = mixture[None, :]
                 # (channels_num, audio_length)
 
-                # Separate.
                 input_dict = {'waveform': mixture}
 
+                # separate
                 sep_wav = self.separator.separate(input_dict)
                 # (channels_num, audio_length)
 
-                # Target
-                clean, _ = librosa.core.load(
-                    clean_path, sr=self.EVALUATION_SAMPLE_RATE, mono=self.mono
-                )
+                sdr = calculate_sdr(ref=clean, est=sep_wav)
 
-                # to mono
-                sep_wav = np.squeeze(sep_wav)
-
-                # Resample for evaluation.
-                sep_wav = librosa.resample(
-                    sep_wav,
-                    orig_sr=self.sample_rate,
-                    target_sr=self.EVALUATION_SAMPLE_RATE,
-                )
-
-                sep_wav = librosa.util.fix_length(sep_wav, size=len(clean), axis=0)
-                # (channels, audio_length)
-
-                # Evaluate metrics
-                pesq_ = pesq(self.EVALUATION_SAMPLE_RATE, clean, sep_wav, 'wb')
-
-                (csig, cbak, covl) = pysepm.composite(
-                    clean, sep_wav, self.EVALUATION_SAMPLE_RATE
-                )
-
-                ssnr = pysepm.SNRseg(clean, sep_wav, self.EVALUATION_SAMPLE_RATE)
-
-                pesqs.append(pesq_)
-                csigs.append(csig)
-                cbaks.append(cbak)
-                covls.append(covl)
-                ssnrs.append(ssnr)
-                print(
-                    '{}, {}, PESQ: {:.3f}, CSIG: {:.3f}, CBAK: {:.3f}, COVL: {:.3f}, SSNR: {:.3f}'.format(
-                        n, audio_name, pesq_, csig, cbak, covl, ssnr
-                    )
-                )
+                print("{} SDR: {:.3f}".format(audio_name, sdr))
+                sdrs.append(sdr)
 
             logging.info("-----------------------------")
-            logging.info('Avg PESQ: {:.3f}'.format(np.mean(pesqs)))
-            logging.info('Avg CSIG: {:.3f}'.format(np.mean(csigs)))
-            logging.info('Avg CBAK: {:.3f}'.format(np.mean(cbaks)))
-            logging.info('Avg COVL: {:.3f}'.format(np.mean(covls)))
-            logging.info('Avg SSNR: {:.3f}'.format(np.mean(ssnrs)))
+            logging.info('Avg SDR: {:.3f}'.format(np.mean(sdrs)))
 
             logging.info("Evlauation time: {:.3f}".format(time.time() - eval_time))
 
-            statistics = {"pesq": np.mean(pesqs)}
+            statistics = {"sdr": np.mean(sdrs)}
             self.statistics_container.append(global_step, statistics, 'test')
             self.statistics_container.dump()

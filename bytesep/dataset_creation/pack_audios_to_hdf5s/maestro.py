@@ -12,7 +12,7 @@ from bytesep.dataset_creation.pack_audios_to_hdf5s.instruments_solo import (
 )
 
 
-def read_csv(meta_csv) -> Dict:
+def read_csv(meta_csv: str) -> Dict:
     r"""Get train & test names from csv.
 
     Args:

@@ -1,6 +1,6 @@
 # Music Source Separation
 
-Music source separation is a task to separate audio recordings into individual sources. This repository is an PyTorch implmementation of music source separation. Users can separate their favorite songs into different sources by installing this repository. In addition, users can train their own music source separation systems using this repository. This repository also includes speech enhancement, instruments separation, etc.
+Music source separation is a task to separate audio recordings into individual sources. This repository is an PyTorch implmementation of music source separation. Users can separate their favorite songs into different sources by installing this repository. Users can also train their own source separation systems. This repository can also be used for training speech enhancement, instruments separation, and any separation systems.
 
 ## Demos
 
@@ -13,32 +13,37 @@ pip install bytesep
 ```
 
 ## Separation
-Users can easily separate their favorite audio recordings into vocals or accompaniment using the pretrained checkpoints. The checkpoints are trained using only the training subset (100 songs) of the [Musdb18 dataset](https://sigsep.github.io/datasets/musdb.html).
+After installation, to separate your favorite song is easy. Users can execute the following commands in any directory.
 
-```python
-python3 separate_scripts/separate.py \
+```bash
+python3 -m bytesep download_checkpoints
+```
+
+```bash
+python3 -m bytesep separate \
+    --source_type="vocals" \
     --audio_path="./resources/vocals_accompaniment_10s.mp3" \
-    --source_type="accompaniment"	# "vocals" | "accompaniment"
+    --output_path="separated_results/output.mp3"
 ```
 
-## Separation with More Models
+Users can also put many audio files into a directory and separate them all.
 
-Download checkpoints.
 ```bash
-./separate_scripts/download_checkpoints.sh
+python3 -m bytesep separate \
+    --source_type="vocals" \
+    --audio_path="audios_directory" \
+    --output_path="outputs_directory"
 ```
 
-Do separation.
-```bash
-./separate_scripts/separate_vocals.sh "resources/vocals_accompaniment_10s.mp3" "sep_vocals.mp3"
-./separate_scripts/separate_accompaniment.sh "resources/vocals_accompaniment_10s.mp3" "sep_accompaniment.mp3"
-```
+The currently supported source types include "vocals" and "accompaniment".
+
+The separation models are trained ONLY on the [Musdb18 dataset](https://sigsep.github.io/datasets/musdb.html) (100 songs). Trained checkpoints can be downloaded at: [https://zenodo.org/record/5799080](https://zenodo.org/record/5799080).
 
 ## Train a music source separation system from scratch
 
-### 1. Download dataset
+### 0. Download dataset
 
-We use the MUSDB18 dataset to train music source separation systems. The trained system can be used to separate vocals, accompaniments, bass, and other sources. Execute the following script to download and decompress the MUSDB18 dataset:
+Users could train on the MUSDB18 dataset to reproduce our music source separation systems. Execute the following script to download and unzip the MUSDB18 dataset:
 
 ```bash
 ./scripts/0_download_datasets/musdb18.sh
@@ -56,14 +61,14 @@ The dataset looks like:
 └── README.md
 </pre>
 
-### 2. Pack audio files into hdf5 files
+### 1. Pack audio files into hdf5 files
 
-We pack audio waveforms into hdf5 files to speed up training.
+Pack audio waveforms into hdf5 files to speed up training.
 ```bash
-."/scripts/1_pack_audios_to_hdf5s/musdb18/sr=44100,chn=2.sh"
+./scripts/1_pack_audios_to_hdf5s/musdb18/sr=44100,chn=2.sh
 ```
 
-### 3. Create indexes for training
+### 2. Create indexes for training
 ```bash
 ./scripts/2_create_indexes/musdb18/create_indexes.sh
 ```
@@ -78,21 +83,46 @@ We pack audio waveforms into hdf5 files to speed up training.
 ./scripts/4_train/musdb18/train.sh
 ```
 
-### 5. Inference
+### 5. Separate using user trained checkpoint
 ```bash
-./scripts/5_inference/musdb18/inference.sh
-
-##
+./scripts/5_separate/musdb18/separate.sh
 ```
 
 ## Results
 
-| Model                     |  Size (MB) | SDR (dB)  | process 1s time (GPU Tesla V100) | process 1s time (CPU Core i7) |
-|---------------------------|------------|-----------|----------------------------------|-------------------------------|
-| ResUNet143 vocals         | 461        | 8.9       | 0.036                            | 2.513                         |
-| ResUNet143 Subband vocals | 414        | 8.8       | 0.012                            | 0.614                         |
-| ResUNet143 acc.           | 461        | 16.8      | 0.036                            | 2.513                         |
-| ResUNet143 Subband acc.   | 414        | 16.4      | 0.012                            | 0.614                         |
+### 1. Separation Metrics
+
+The following table shows the signal to noise ratio (SDR) metrics of vocals and accompaniment. The MSS systems are only trained with 100 songs from the MUSDB18 dataset. The metrics are calculated on the 50 test songs. It is highly suggest to use the subband version because it is faster to train and inference.
+
+| Model                     | vocals (dB) | accompaniment (dB) |
+|---------------------------|-------------|--------------------|
+| ResUNet143 vocals         | 8.9         | 16.8               |
+| ResUNet143 Subband vocals | 8.7         | 16.4               |
+| MobileNet Subband vocals  | 7.2         | 14.6               |
+
+### 2. Parameters number & speed
+
+The following table shows the number of parameters and inference time of a 1-min audio clip.
+
+| Model              |  Trainable params. num | process 1-min time (GPU Tesla V100) | process 1-min time (CPU Core i7) |
+|--------------------|------------------------|-------------------------------------|----------------------------------|
+| ResUNet143 ISMIR   | 102 million            | 2.24 s                              | 53.00 s                          |
+| ResUNet143 Subband | 102 million            | 0.56 s                              | 13.68 s                          |
+| MobileNet Subband  | 0.306 million          | 0.33 s                              | 9.84                             |
+
+### 3. Metrics over step
+
+The evaluation metrics over different stesp is shown below.
+
+<img src="./resources/sdr_metrics.jpg" width="600">
+
+## Finetune on new datasets
+
+Users can finetuen pretrained checkpoints on new datasets. The following script is a template showing how to finetune pretrained a MSS system to the VCTK dataset for speech enhancement. (This is just an example. There is no problem if users do not have the VCTK dataset.) Users can also resume the training from a checkpoint by modifying the following script.
+
+```bash
+./scripts/4_train/vctk-musdb18/finetune.sh
+```
 
 ## Cite
 
@@ -107,8 +137,15 @@ We pack audio waveforms into hdf5 files to speed up training.
 }
 ```
 
+## Contact
+
+Qiquiang Kong
+
+
 ## Frequent Asked Questions (FAQ)
+
 [FAQ.md](FAQ.md)
+
 
 ## External Links
 
@@ -123,5 +160,3 @@ Spleeter: [https://github.com/deezer/spleeter](https://github.com/deezer/spleete
 Asteroid: [https://github.com/asteroid-team/asteroid](https://github.com/asteroid-team/asteroid)
 
 Open-Unmix: [https://github.com/sigsep/open-unmix-pytorch](https://github.com/sigsep/open-unmix-pytorch)
-
-Others

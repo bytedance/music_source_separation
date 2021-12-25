@@ -8,7 +8,7 @@ from bytesep.utils import db_to_magnitude, get_pitch_shift_factor, magnitude_to_
 
 class Augmentor:
     def __init__(self, augmentations: Dict, random_seed=1234):
-        r"""Augmentor for data augmentation of a waveform.
+        r"""Augmentor for augmenting one segment.
 
         Args:
             augmentations: Dict, e.g, {
@@ -25,11 +25,11 @@ class Augmentor:
         r"""Augment a waveform.
 
         Args:
-            waveform: (channels_num, audio_samples)
+            waveform: (input_channels, audio_samples)
             source_type: str
 
         Returns:
-            new_waveform: (channels_num, new_audio_samples)
+            new_waveform: (input_channels, new_audio_samples)
         """
         if 'pitch_shift' in self.augmentations.keys():
             waveform = self.pitch_shift(waveform, source_type)
@@ -47,15 +47,15 @@ class Augmentor:
 
     def pitch_shift(self, waveform: np.array, source_type: str) -> np.array:
         r"""Shift the pitch of a waveform. We use resampling for fast pitch
-        shifting, so the speed will also be chaneged. The length of the returned
-        waveform will be changed.
+        shifting, so the speed of the waveform will also be changed. The length
+        of the returned waveform will be changed.
 
         Args:
-            waveform: (channels_num, audio_samples)
+            waveform: (input_channels, audio_samples)
             source_type: str
 
         Returns:
-            new_waveform: (channels_num, new_audio_samples)
+            new_waveform: (input_channels, new_audio_samples)
         """
 
         # maximum pitch shift in semitones
@@ -74,9 +74,9 @@ class Augmentor:
         pitch_shift_factor = get_pitch_shift_factor(rand_pitch)
         dummy_sample_rate = 10000  # Dummy constant.
 
-        channels_num = waveform.shape[0]
+        input_channels = waveform.shape[0]
 
-        if channels_num == 1:
+        if input_channels == 1:
             waveform = np.squeeze(waveform)
 
         new_waveform = librosa.resample(
@@ -87,7 +87,7 @@ class Augmentor:
             axis=-1,
         )
 
-        if channels_num == 1:
+        if input_channels == 1:
             new_waveform = new_waveform[None, :]
 
         return new_waveform
@@ -96,11 +96,11 @@ class Augmentor:
         r"""Scale the magnitude of a waveform.
 
         Args:
-            waveform: (channels_num, audio_samples)
+            waveform: (input_channels, audio_samples)
             source_type: str
 
         Returns:
-            new_waveform: (channels_num, audio_samples)
+            new_waveform: (input_channels, audio_samples)
         """
         lower_db = self.augmentations['magnitude_scale'][source_type]['lower_db']
         higher_db = self.augmentations['magnitude_scale'][source_type]['higher_db']
@@ -111,9 +111,6 @@ class Augmentor:
         # The magnitude (in dB) of the sample with the maximum value.
         waveform_db = magnitude_to_db(np.max(np.abs(waveform)))
 
-        # new_waveform_db = self.random_state.uniform(
-        #     waveform_db + lower_db, min(waveform_db + higher_db, 0)
-        # )
         new_waveform_db = self.random_state.uniform(
             waveform_db + lower_db, waveform_db + higher_db
         )
@@ -130,11 +127,11 @@ class Augmentor:
         r"""Randomly swap channels.
 
         Args:
-            waveform: (channels_num, audio_samples)
+            waveform: (input_channels, audio_samples)
             source_type: str
 
         Returns:
-            new_waveform: (channels_num, audio_samples)
+            new_waveform: (input_channels, audio_samples)
         """
         ndim = waveform.shape[0]
 
@@ -148,11 +145,11 @@ class Augmentor:
         r"""Randomly flip the waveform along x-axis.
 
         Args:
-            waveform: (channels_num, audio_samples)
+            waveform: (input_channels, audio_samples)
             source_type: str
 
         Returns:
-            new_waveform: (channels_num, audio_samples)
+            new_waveform: (input_channels, audio_samples)
         """
         ndim = waveform.shape[0]
         random_values = self.random_state.choice([-1, 1], size=ndim)
