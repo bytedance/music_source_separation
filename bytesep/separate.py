@@ -176,7 +176,7 @@ def separate_file(args) -> NoReturn:
     os.system(
         'ffmpeg -y -loglevel panic -i "{}" "{}"'.format(tmp_wav_path, output_path)
     )
-    os.system('rm "{}"'.format(tmp_wav_path))
+    os.remove(tmp_wav_path)
 
     print('Write out to {}'.format(output_path))
 
@@ -253,7 +253,7 @@ def separate_dir(args) -> NoReturn:
         os.system(
             'ffmpeg -y -loglevel panic -i "{}" "{}"'.format(tmp_wav_path, output_path)
         )
-        os.system('rm "{}"'.format(tmp_wav_path))
+        os.remove(tmp_wav_path)
         print('{} / {}, Write out to {}'.format(n, audios_num, output_path))
 
 

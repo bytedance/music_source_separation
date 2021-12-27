@@ -33,18 +33,17 @@ def download_checkpoints(args) -> NoReturn:
 
     for checkpoint_name in checkpoint_names:
 
-        remote_checkpoint_link = os.path.join(zenodo_dir, checkpoint_name)
+        remote_checkpoint_link = os.path.join(zenodo_dir, checkpoint_name).replace('\\', '/')
         local_checkpoint_link = os.path.join(
             local_checkpoints_dir, checkpoint_name.split("?")[0]
         )
-
         command_str = 'wget -O "{}" "{}"'.format(
             local_checkpoint_link, remote_checkpoint_link
         )
         os.system(command_str)
 
     # Download and unzip config yaml files.
-    remote_zip_scripts_link = os.path.join(zenodo_dir, "train_scripts.zip?download=1")
+    remote_zip_scripts_link = os.path.join(zenodo_dir, "train_scripts.zip?download=1").replace('\\', '/')
     local_zip_scripts_path = os.path.join(local_checkpoints_dir, "train_scripts.zip")
 
     os.system('wget -O "{}" {}'.format(local_zip_scripts_path, remote_zip_scripts_link))
@@ -196,7 +195,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="mode")
 
-    parser_download_checkpoints = subparsers.add_parser("download-checkpoints")
+    parser_download_checkpoints = subparsers.add_parser("download_checkpoints")
 
     parser_separate = subparsers.add_parser("separate")
     parser_separate.add_argument(
@@ -235,7 +234,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.mode == "download-checkpoints":
+    if args.mode == "download_checkpoints":
         download_checkpoints(args)
 
     elif args.mode == "separate":
