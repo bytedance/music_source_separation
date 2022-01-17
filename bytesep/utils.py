@@ -181,7 +181,7 @@ class StatisticsContainer(object):
             datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
         )
 
-        self.statistics_dict = {"train": [], "test": []}
+        self.statistics_dict = {"train": [], "test": [], "best_sdr": 0}
 
     def append(self, steps, statistics, split):
         statistics["steps"] = steps
@@ -192,6 +192,14 @@ class StatisticsContainer(object):
         pickle.dump(self.statistics_dict, open(self.backup_statistics_path, "wb"))
         logging.info("    Dump statistics to {}".format(self.statistics_path))
         logging.info("    Dump statistics to {}".format(self.backup_statistics_path))
+
+    def get_best_sdr(self):
+        return self.statistics_dict["best_sdr"]
+
+    def update_best_sdr(self, best_sdr):
+        assert best_sdr > self.get_best_sdr()
+
+        self.statistics_dict["best_sdr"] = best_sdr
 
     '''
     def load_state_dict(self, resume_steps):
