@@ -8,6 +8,7 @@ import musdb
 import museval
 import numpy as np
 import pytorch_lightning as pl
+import torch
 import torch.nn as nn
 from pytorch_lightning.utilities import rank_zero_only
 
@@ -293,6 +294,16 @@ class Musdb18EvaluationCallback(pl.Callback):
             statistics = {"sdr_dict": sdr_dict, "median_sdr_dict": median_sdr_dict}
             self.statistics_container.append(global_step, statistics, self.split)
             self.statistics_container.dump()
+
+            # save model with the best sdr
+            best_sdr = self.statistics_container.get_best_sdr()
+            if median_sdr > best_sdr:
+                self.statistics_container.update_best_sdr(median_sdr)
+                checkpoints_path = os.path.join(self.checkpoints_dir, "best_model.pth")
+                ckpt = {'step': global_step, 'model': self.model.state_dict()}
+                torch.save(ckpt, checkpoints_path)
+                logging.info("Update best SDR to {median_sdr} and save ckpt to {checkpoints_path}")
+
 
 
 def get_separated_wavs_from_simo_output(x, input_channels, target_source_types) -> Dict:
