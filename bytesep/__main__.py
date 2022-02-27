@@ -124,7 +124,7 @@ def get_paths(source_type: str, model_type: str) -> [str, str]:
                 local_checkpoints_dir,
                 "resunet143_subbtandtime_accompaniment_16.4dB_500k_steps_v2.pth",
             )
-            assert os.path.getsize(checkpoint_path) == 414046363, error_message
+            assert os.path.getsize(checkpoint_path) == 414036369, error_message
 
         else:
             raise NotImplementedError
