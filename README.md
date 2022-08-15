@@ -20,7 +20,7 @@ pip install bytesep==0.1.1
 After installation, to separate your favorite song is easy. Users can execute the following commands in any directory.
 
 ```bash
-python3 -m bytesep download_checkpoints
+python3 -m bytesep download-checkpoints
 ```
 
 ```bash
